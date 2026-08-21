@@ -47,7 +47,7 @@ export async function generateMetadata({
     title: `${product.name} | Jack The Jelli`,
     description:
       product.description ??
-      `${product.name} from the ${product.category} collection.`,
+      `${product.name} from the ${product.category} collection. Built for daily carry, and for the odd second glance.`,
   };
 }
 

@@ -54,7 +54,7 @@ export default function HeroSection() {
           >
             Quiet Craftsmanship.
             <br className="hidden md:block" />
-            Endless Character.
+            Loud Compliments.
           </h1>
         </div>
 

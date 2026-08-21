@@ -19,7 +19,7 @@ export default function Footer() {
 
         {/* Centered: tagline */}
         <p className="text-on-surface-variant mt-4 text-center text-[14px] leading-relaxed tracking-wider">
-          Artisanal leather goods, crafted for the discerning few.
+          Handmade leather goods, and the second looks that follow.
         </p>
 
         {/* Centered: support links + copyright */}

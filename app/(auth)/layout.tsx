@@ -33,7 +33,7 @@ export default function AuthLayout({
               Jack The Jelli
             </h1>
             <p className="text-muted-foreground mt-4 text-xs tracking-[0.3em] uppercase">
-              Crafted for the Discerning
+              They’re Jelly of the Gear
             </p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export default function AuthLayout({
               Jack The Jelli
             </span>
             <p className="text-muted-foreground mt-1 text-[10px] tracking-[0.25em] uppercase">
-              Crafted for the Discerning
+              They’re Jelly of the Gear
             </p>
           </div>
         </Link>

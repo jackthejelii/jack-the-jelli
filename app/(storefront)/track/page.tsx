@@ -4,7 +4,7 @@ import TrackOrderForm from "@/features/orders/components/TrackOrderForm";
 export const metadata: Metadata = {
   title: "Track Your Order | Jack The Jelli",
   description:
-    "Look up the current status of your Jack The Jelli order with its order number and the phone number you gave.",
+    "Drop in your order number and the phone number you gave, and we’ll show you exactly where your gear is — and how long until the compliments start.",
 };
 
 /**

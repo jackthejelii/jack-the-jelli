@@ -16,9 +16,37 @@ const inter = Inter({
   weight: ["400", "600"],
 });
 
+const SITE_URL = "https://jackthejelli.com";
+
 export const metadata: Metadata = {
-  title: "Jack The Jelli | Crafted for the Discerning",
-  description: "Artisanal leather goods, crafted for the discerning few.",
+  // Lets `openGraph.images` (and any `alternates.canonical` added per page)
+  // be written as a relative path — Next resolves them against this origin.
+  metadataBase: new URL(SITE_URL),
+  title: "Jack The Jelli | They’re jelly of the gear",
+  description:
+    "Handmade leather wallets built for daily carry and the occasional second look. Pull one out and watch the table go quietly jelly.",
+  openGraph: {
+    type: "website",
+    siteName: "Jack The Jelli",
+    // Deliberately no `title`/`description`/`url` here. `openGraph` is
+    // inherited wholesale by any page that doesn't declare its own, so setting
+    // them would stamp the homepage's copy onto every shared product link.
+    // Left blank, Next fills og:title/og:description from each page's own
+    // `title`/`description`, and the image below still applies everywhere.
+    images: [
+      {
+        // public/link-preview.jpg is 2001x2001 — square, not the 1.91:1
+        // Facebook prefers, so it renders as a large square card and X
+        // centre-crops it. Swap the file (same name) to change that.
+        url: "/link-preview.jpg",
+        width: 2001,
+        height: 2001,
+        alt: "Jack The Jelli",
+      },
+    ],
+  },
+  // No `twitter` block: Next derives twitter:title/description/image from
+  // `openGraph` and picks `summary_large_image` whenever an image is present.
 };
 
 export default function RootLayout({

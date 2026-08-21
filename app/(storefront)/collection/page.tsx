@@ -10,7 +10,8 @@ import { getPublicProducts } from "@/features/products/lib/products";
 
 export const metadata: Metadata = {
   title: "The Collections | Jack The Jelli",
-  description: "Discover our definitive selection of artisanal leather goods.",
+  description:
+    "Every piece we make, in one place — the wallets people notice, ask about, and then go looking for themselves.",
 };
 
 interface CollectionPageProps {

@@ -5,9 +5,9 @@ export default function CollectionHero() {
         The Collections
       </h1>
       <p className="text-on-surface-variant mx-auto max-w-2xl text-[18px] leading-[1.6]">
-        Discover our definitive selection of artisanal leather goods. Each piece
-        is crafted with uncompromising attention to detail, designed to age
-        gracefully alongside you.
+        Every piece we make, in one place. Each one is crafted with
+        uncompromising attention to detail, designed to age gracefully alongside
+        you — and to be quietly admired by everyone else.
       </p>
     </section>
   );
