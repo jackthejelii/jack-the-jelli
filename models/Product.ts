@@ -18,6 +18,13 @@ export interface IProduct {
   description?: string;
   stock: number;
   status: ProductStatus;
+  /**
+   * Admin-set flag for the homepage featured strip. A dedicated boolean rather
+   * than a `tags: ["featured"]` convention: it maps 1:1 to a checkbox, it can
+   * be indexed alongside `status`, and it can't be broken by a typo in a free
+   * text field.
+   */
+  featured: boolean;
   thumbnail?: string;
   images: IProductImage[];
   /** Schema-only (D3a): no form control yet, kept so adding one needs no migration. */
@@ -63,6 +70,9 @@ const productSchema = new Schema<IProduct>(
       default: "Draft",
       index: true,
     },
+    // Absent on every document written before this field existed, which reads
+    // as false to a `featured: true` query — so no backfill is needed.
+    featured: { type: Boolean, default: false },
     // Cloudinary secure_url of the primary image.
     thumbnail: { type: String },
     // Objects rather than bare URLs: publicId is what makes deletion possible.
@@ -79,6 +89,7 @@ const productSchema = new Schema<IProduct>(
 productSchema.index({ status: 1, createdAt: -1 }); // default browse + "newest"
 productSchema.index({ status: 1, price: 1 }); // price sorts + related products
 productSchema.index({ status: 1, category: 1, createdAt: -1 }); // category filter
+productSchema.index({ status: 1, featured: 1, createdAt: -1 }); // homepage strip
 
 // Search is an unanchored /foo/i regex, which can never *seek* an index — this
 // only lets Mongo scan the index instead of the collection. A modest win, and

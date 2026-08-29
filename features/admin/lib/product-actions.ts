@@ -17,6 +17,7 @@ import {
   createProductSchema,
   OBJECT_ID_PATTERN,
   PRODUCT_VALUE_FIELDS,
+  productFeaturedSchema,
   productIdSchema,
   readProductFormData,
   updateProductSchema,
@@ -184,8 +185,17 @@ export async function createProduct(
     };
   }
 
-  const { name, sku, category, price, stock, description, images, intent } =
-    parsed.data;
+  const {
+    name,
+    sku,
+    category,
+    price,
+    stock,
+    description,
+    images,
+    featured,
+    intent,
+  } = parsed.data;
 
   try {
     await connectDB();
@@ -198,6 +208,7 @@ export async function createProduct(
       stock,
       description,
       status: intent === "publish" ? "Published" : "Draft",
+      featured,
       images,
       thumbnail: images[0]?.url,
     });
@@ -221,6 +232,9 @@ export async function createProduct(
   }
 
   revalidatePath("/admin/products");
+  // The homepage renders the featured strip, so it goes stale on any change to
+  // what is featured, published, named or priced — not just on the flag.
+  revalidatePath("/");
   // redirect() throws by design — it must stay outside the try/catch (§6.6).
   redirect("/admin/products");
 }
@@ -243,8 +257,18 @@ export async function updateProduct(
     };
   }
 
-  const { id, name, sku, category, price, stock, description, images, intent } =
-    parsed.data;
+  const {
+    id,
+    name,
+    sku,
+    category,
+    price,
+    stock,
+    description,
+    images,
+    featured,
+    intent,
+  } = parsed.data;
 
   // Captured before the images are replaced, so the cleanup below knows what
   // was dropped.
@@ -267,6 +291,7 @@ export async function updateProduct(
     product.description = description;
     // Same intent switch as create (D4), so this is also how a draft ships.
     product.status = intent === "publish" ? "Published" : "Draft";
+    product.featured = featured;
     product.images = images;
     product.thumbnail = images[0]?.url;
     // save() rather than findByIdAndUpdate so the slug hook runs on a rename.
@@ -298,7 +323,65 @@ export async function updateProduct(
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
+  revalidatePath("/");
   redirect("/admin/products");
+}
+
+/**
+ * The Featured column on the inventory table.
+ *
+ * Deliberately not a partial `updateProduct`: this is one reversible flag, and
+ * routing it through the full product schema would mean a piece whose category
+ * was since deleted, or whose name now collides, could not be un-featured
+ * without first fixing unrelated fields. It writes the one key it owns.
+ *
+ * The flag is independent of `status` — a Draft can carry it — because the
+ * storefront query filters on Published anyway. That way publishing a piece
+ * that was already marked puts it straight into the strip, instead of silently
+ * dropping the mark while it sat in Draft.
+ */
+export async function setProductFeatured(
+  _prevState: AdminFormState,
+  formData: FormData,
+): Promise<AdminFormState> {
+  await requireAdmin();
+
+  const featured = formData.get("featured");
+  const parsed = productFeaturedSchema.safeParse({
+    id: formData.get("id"),
+    // FormData yields null for a missing key, which `.optional()` would reject
+    // as a type error rather than read as "not featured".
+    featured: typeof featured === "string" ? featured : undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: "That product no longer exists." };
+  }
+
+  try {
+    await connectDB();
+    const updated = await Product.findByIdAndUpdate(parsed.data.id, {
+      featured: parsed.data.featured,
+    });
+    if (!updated) {
+      return { ok: false, message: "That product no longer exists." };
+    }
+  } catch (error) {
+    console.error("setProductFeatured failed", error);
+    return {
+      ok: false,
+      message: "Something went wrong while updating this product.",
+    };
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${parsed.data.id}`);
+  revalidatePath("/");
+  return {
+    ok: true,
+    message: parsed.data.featured
+      ? "Added to the homepage selection."
+      : "Removed from the homepage selection.",
+  };
 }
 
 /**
@@ -337,6 +420,8 @@ export async function archiveProduct(
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${parsed.data.id}`);
+  // A featured product that leaves Published has to leave the homepage too.
+  revalidatePath("/");
   return { ok: true, message: "Product archived." };
 }
 
@@ -374,5 +459,7 @@ export async function restoreProduct(
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${parsed.data.id}`);
+  // A featured product that leaves Published has to leave the homepage too.
+  revalidatePath("/");
   return { ok: true, message: "Product restored to Draft." };
 }

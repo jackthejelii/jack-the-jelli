@@ -8,15 +8,11 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import ProductCard from "@/features/products/components/ProductCard";
+import {
+  CAROUSEL_ARROW_CLASS,
+  CAROUSEL_ITEM_CLASS,
+} from "@/features/products/lib/carousel";
 import type { Product } from "@/features/products/lib/types";
-
-// Arrows live in the header row rather than floating over the images: the
-// design language has no elevation, so overlay controls would need a shadow to
-// stay legible. Overrides shadcn's default `absolute … rounded-full`; `my-0`
-// neutralises the `my-auto` its horizontal orientation still applies, and
-// size-11 (44px) clears the minimum touch target.
-const ARROW_CLASS =
-  "border-secondary hover:bg-foreground hover:text-background static my-0 size-11 shrink-0 translate-x-0 translate-y-0 rounded-none border transition-colors duration-300 disabled:opacity-40";
 
 export default function RelatedProducts({ products }: { products: Product[] }) {
   if (products.length === 0) return null;
@@ -49,17 +45,17 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
             </div>
 
             <div className="flex items-center gap-2">
-              <CarouselPrevious variant="ghost" className={ARROW_CLASS} />
-              <CarouselNext variant="ghost" className={ARROW_CLASS} />
+              <CarouselPrevious
+                variant="ghost"
+                className={CAROUSEL_ARROW_CLASS}
+              />
+              <CarouselNext variant="ghost" className={CAROUSEL_ARROW_CLASS} />
             </div>
           </div>
 
           <CarouselContent className="mt-10 -ml-4 md:-ml-8">
             {products.map((product, i) => (
-              <CarouselItem
-                key={product.id}
-                className="basis-[70%] pl-4 sm:basis-1/2 md:pl-8 lg:basis-1/3 xl:basis-1/4"
-              >
+              <CarouselItem key={product.id} className={CAROUSEL_ITEM_CLASS}>
                 {/* Mount-triggered for the same reason as the collection
                     grid, and additionally because these sit in a carousel: a
                     scroll observer would leave the off-screen slides hidden

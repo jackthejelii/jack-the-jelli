@@ -41,7 +41,7 @@ export default function ProductGallery({ images, alt }: ProductGalleryProps) {
         setApi={setApi}
         opts={{ loop: hasMultiple, active: hasMultiple }}
         className="w-full"
-        aria-label={`${alt} — product images`}
+        aria-label={`${alt}: product images`}
       >
         <CarouselContent className="ml-0">
           {images.map((image, i) => (
@@ -62,7 +62,7 @@ export default function ProductGallery({ images, alt }: ProductGalleryProps) {
                   src={image.url}
                   alt={
                     hasMultiple
-                      ? `${alt} — view ${i + 1} of ${images.length}`
+                      ? `${alt}, view ${i + 1} of ${images.length}`
                       : alt
                   }
                   fill

@@ -147,7 +147,7 @@ export default function AccountForm({
                 <Badge variant="destructive">Not verified</Badge>
                 {resendState === "sent" ? (
                   <span className="text-muted-foreground text-xs">
-                    Verification email sent — check your inbox.
+                    Verification email sent. Check your inbox.
                   </span>
                 ) : (
                   <button

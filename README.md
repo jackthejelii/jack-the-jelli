@@ -97,7 +97,7 @@ features/
   auth/       login/register/reset forms + schemas
   cart/       zustand store, cart sheet, server sync
   checkout/   checkout form, delivery zones, placeOrder, receipt cookie
-  homepage/   hero, product section, craftsmanship grid, footer
+  homepage/   hero, product section, featured strip, footer
   legal/      privacy + terms documents
   orders/     order state machine, receipts, timeline, /track form
   products/   collection grid, filters, search, product detail, gallery
@@ -129,7 +129,7 @@ all. `lib/users.ts` types the raw `user` collection for the places that read it.
 ### `Product`
 
 `name · slug · sku · category(ref) · price · description · stock · status ·
-thumbnail · images[{url, publicId}] · comparePrice · tags`
+featured · thumbnail · images[{url, publicId}] · comparePrice · tags`
 
 - `status`: `Draft | Published | Archived`. Every storefront query filters on
   `status: "Published"`.
@@ -137,9 +137,15 @@ thumbnail · images[{url, publicId}] · comparePrice · tags`
   with a numeric suffix; the unique index is the last line of defence.
 - Images store `publicId` as well as `url` — that's what makes Cloudinary
   deletion possible.
-- Four compound indexes exist so each filter carries its sort key
+- Five compound indexes exist so each filter carries its sort key
   (`status+createdAt`, `status+price`, `status+category+createdAt`,
-  `status+name`).
+  `status+name`, `status+featured+createdAt`).
+- `featured` is the admin-set flag behind the homepage strip: a checkbox on
+  both product forms, and a one-click column on the inventory table
+  (`setProductFeatured`, which writes that key alone rather than re-validating
+  the whole product). Read by `getFeaturedProducts`. Absent on documents
+  written before the field existed, which reads as `false` to the query, so
+  there is nothing to backfill.
 - `comparePrice` and `tags` are schema-only: no form control yet, kept so adding
   one needs no migration.
 
@@ -195,7 +201,7 @@ write.
 
 | Route                                    | What it does                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `/`                                      | Hero, product section, craftsmanship grid                                                         |
+| `/`                                      | Hero, product section, featured strip                                                             |
 | `/collection`                            | Paged grid (9/page), category filter, sort (`newest`/`price-asc`/`price-desc`), predictive search |
 | `/collection/[slug]`                     | Product detail: gallery, specs, add-to-cart, related products                                     |
 | `/checkout`                              | Guest-first checkout (division / district / thana, COD)                                           |

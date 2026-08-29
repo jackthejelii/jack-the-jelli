@@ -61,7 +61,9 @@ export default function ProductCard({
   }
 
   return (
-    <div className="group">
+    // data-product-root marks the boundary AddToCartButton searches for the
+    // image to fly to the cart — see features/cart/lib/fly-to-cart.ts.
+    <div className="group" data-product-root="">
       <AppLink href={href} tabIndex={-1} aria-hidden="true">
         <div className="bg-surface-container relative aspect-square overflow-hidden">
           <Image
@@ -90,7 +92,7 @@ export default function ProductCard({
         <AddToCartButton product={product} />
         <AppLink
           href={href}
-          className="border-secondary text-foreground hover:bg-secondary hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-3 py-3 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
+          className="border-secondary text-foreground hover:bg-secondary hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-3 py-3 text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,border-color,transform] duration-(--motion-quick) active:translate-y-px"
         >
           View details
         </AppLink>

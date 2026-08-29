@@ -229,13 +229,72 @@
   transform: none;
 }
 
+/* Group reveal — the `group` prop and `RevealItem` in Reveal.tsx.
+   Same entrance, triggered by the container rather than by each item. A strip
+   that scrolls sideways needs this: a slide sitting off the right edge of the
+   viewport never intersects it, so a per-item observer would hold it at
+   opacity 0 until the shopper had already scrolled it into view — they would
+   arrive at a blank card and watch it fade in under them. Observing the
+   container instead means the whole row is choreographed off one trigger, and
+   the stagger still comes from each item's own --reveal-delay. */
+[data-reveal-item] {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-rise), 0);
+  transition:
+    opacity var(--motion-reveal) var(--motion-ease) var(--reveal-delay, 0ms),
+    transform var(--motion-reveal) var(--motion-ease) var(--reveal-delay, 0ms);
+}
+
+.reveal-group[data-revealed="true"] [data-reveal-item] {
+  opacity: 1;
+  transform: none;
+}
+
 /* Without scripting the observer never runs, and an entrance animation is not
    worth hiding the catalogue over. */
 @media (scripting: none) {
-  .reveal {
+  .reveal,
+  [data-reveal-item] {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Hero arrival — features/homepage/components/HeroSection.tsx.
+   The image lands slightly oversized and settles to true scale, so the first
+   thing on the page is already in motion when it is read. Replaces a 10s
+   hover-driven zoom that only played if a cursor happened to rest on the hero
+   and reversed the moment it left. One pass, on load, then still: this is an
+   arrival, not an ambient effect. Longer than --motion-reveal on purpose — it
+   is a full-bleed photograph, and at 420ms a viewport-sized element reads as a
+   lurch. */
+@keyframes hero-settle {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@utility hero-settle {
+  animation: hero-settle 1400ms var(--motion-ease) both;
+}
+
+/* Filtering feedback — features/products/components/CollectionGrid.tsx.
+   CollectionFilters already marks its row [data-pending] while a filter or
+   sort round-trip is in flight; this is what makes the results answer for it.
+   Written as :has() rather than threading the transition state down through
+   props: the pending flag belongs to the filter row that owns the transition,
+   and the grid only needs to react to it, not re-render on it.
+   The grid remounts on a new result set (see the key in collection/page.tsx),
+   so the cards' own entrance covers the arrival; this covers the departure. */
+[data-collection]:has([data-pending]) [data-results] {
+  opacity: 0.45;
+}
+
+[data-results] {
+  transition: opacity var(--motion-quick) var(--motion-ease);
 }
 
 /* Cart count acknowledgement — features/cart/components/CartButton.tsx.
@@ -282,7 +341,8 @@
 
   /* Reveals arrive instantly rather than not at all — the entrance is
      decoration, the content is not. */
-  .reveal {
+  .reveal,
+  [data-reveal-item] {
     transition: none;
     opacity: 1;
     transform: none;
@@ -290,5 +350,16 @@
 
   .cart-tick {
     animation: none;
+  }
+
+  /* The photograph is the content; only its arrival is decoration. */
+  .hero-settle {
+    animation: none;
+  }
+
+  /* The dim stays — it is the only signal that a filter is still resolving —
+     it just arrives without a fade. */
+  [data-results] {
+    transition: none;
   }
 }

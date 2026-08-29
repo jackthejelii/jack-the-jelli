@@ -63,11 +63,22 @@ export default function CollectionGrid({
   };
 
   return (
-    <section className="mx-auto max-w-360 px-5 pb-32 md:px-16">
+    // data-collection / data-results pair with the [data-pending] flag
+    // CollectionFilters already sets on its own row: while a filter or sort is
+    // resolving, the results it is about to replace step back. The rule lives
+    // in app/globals.css, so neither this component nor the filters re-render
+    // to express it. Nothing is threaded between them but the DOM.
+    <section
+      className="mx-auto max-w-360 px-5 pb-32 md:px-16"
+      data-collection=""
+    >
       <CollectionFilters categories={categories} />
 
       {products.length > 0 ? (
-        <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          className="mt-12 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3"
+          data-results=""
+        >
           {/* Deliberately a mount animation rather than the scroll-driven
               Reveal the homepage uses: this is the catalogue, and cards that
               stayed invisible until an observer hydrated would be the wrong
@@ -90,6 +101,7 @@ export default function CollectionGrid({
         <p
           role="status"
           className="text-on-surface-variant mt-16 text-center text-[16px]"
+          data-results=""
         >
           {total === 0 && !query.q && !query.category
             ? "No pieces are available yet. Check back soon."

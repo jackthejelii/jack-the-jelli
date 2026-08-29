@@ -6,6 +6,7 @@ import { Category, Product, type IProduct } from "@/models";
 import {
   CATEGORY_SUGGESTION_LIMIT,
   DEFAULT_SORT,
+  FEATURED_LIMIT,
   PRODUCTS_PER_PAGE,
   SEARCH_MIN_CHARS,
   SUGGESTION_LIMIT,
@@ -286,6 +287,30 @@ export async function getProductSuggestions({
     categories: categorySuggestions,
     total,
   };
+}
+
+/**
+ * The homepage featured strip. `featured` is an explicit admin flag on the
+ * product (see models/Product.ts), so this is a real query — an admin
+ * unpublishing or unflagging a piece takes it off the front page, and the
+ * strip is empty until someone flags something rather than falling back to
+ * "newest" and pretending to be curated.
+ *
+ * Ordered newest-first: there is no per-product sort key, so the most recent
+ * addition to the selection leads. Reordering the strip by hand would need a
+ * `featuredOrder` field, which nothing has asked for yet.
+ */
+export async function getFeaturedProducts(
+  limit: number = FEATURED_LIMIT,
+): Promise<PublicProduct[]> {
+  await connectDB();
+
+  const products = await findLeanProducts(
+    { status: "Published", featured: true },
+    { sort: { createdAt: -1, _id: -1 }, limit },
+  );
+
+  return products.map(toPublicProduct);
 }
 
 export interface RelatedProductQuery {

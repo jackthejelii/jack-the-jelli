@@ -96,7 +96,7 @@ export default function CheckoutView({
         <p className="text-on-surface-variant mt-4 max-w-md text-[16px] leading-relaxed">
           {withdrawn.length > 0
             ? "The last of your pieces sold out or was withdrawn before you could order it. Nothing was placed."
-            : "Your cart is empty. Every piece is made in small numbers — the collection is worth a look."}
+            : "Your cart is empty. Every piece is made in small numbers, and the collection is worth a look."}
         </p>
         <AppLink
           href="/collection"
@@ -179,7 +179,7 @@ export default function CheckoutView({
                   autoComplete="name"
                   defaultValue={state.values?.fullName ?? defaults.fullName}
                   aria-invalid={Boolean(state.errors?.fullName)}
-                  placeholder="e.g. Jane Doe"
+                  placeholder="e.g. Rafiq Ahmed"
                   className={underlineInputClassName}
                 />
                 <FieldError>{state.errors?.fullName}</FieldError>

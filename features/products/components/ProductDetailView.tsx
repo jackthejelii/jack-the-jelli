@@ -1,4 +1,5 @@
 import AppLink from "@/components/layout/AppLink";
+import Reveal from "@/components/layout/Reveal";
 import { ArrowLeft } from "lucide-react";
 import { getStockStatus } from "@/features/products/lib/stock";
 import AddToCartButton from "@/features/products/components/AddToCartButton";
@@ -32,7 +33,12 @@ export default function ProductDetailView({
   const soldOut = product.stock <= 0;
 
   return (
-    <div className="mx-auto max-w-360 px-5 pt-32 pb-32 md:px-16 md:pt-40">
+    // data-product-root: the boundary AddToCartButton searches for the image it
+    // sends to the cart — features/cart/lib/fly-to-cart.ts.
+    <div
+      className="mx-auto max-w-360 px-5 pt-32 pb-32 md:px-16 md:pt-40"
+      data-product-root=""
+    >
       <AppLink
         href="/collection"
         className="text-on-surface-variant hover:text-foreground ease-editorial mb-8 inline-flex w-fit items-center gap-2 text-[12px] font-semibold tracking-[0.1em] uppercase transition-colors duration-(--motion-quick)"
@@ -41,13 +47,17 @@ export default function ProductDetailView({
         The Collections
       </AppLink>
 
+      {/* The two columns arrive one stagger step apart rather than together:
+          the photograph is what the page is for, and the details answer it.
+          Reveal takes over each column's own classes instead of wrapping them,
+          so the flex row and the sticky column keep the same DOM they had. */}
       <div className="flex flex-col gap-10 lg:flex-row lg:gap-12">
-        <div className="w-full lg:w-3/5">
+        <Reveal index={0} className="w-full lg:w-3/5">
           <ProductGallery images={images} alt={product.name} />
-        </div>
+        </Reveal>
 
         <div className="w-full lg:w-2/5">
-          <div className="flex flex-col lg:sticky lg:top-32">
+          <Reveal index={1} className="flex flex-col lg:sticky lg:top-32">
             <p className="text-on-surface-variant text-[12px] font-semibold tracking-[0.1em] uppercase">
               {product.category}
             </p>
@@ -78,7 +88,7 @@ export default function ProductDetailView({
             </div>
 
             <ProductSpecList sku={product.sku} category={product.category} />
-          </div>
+          </Reveal>
         </div>
       </div>
     </div>

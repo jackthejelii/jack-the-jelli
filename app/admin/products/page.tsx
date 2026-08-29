@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Plus, Pencil } from "lucide-react";
 import ArchiveProductButton from "@/features/admin/components/ArchiveProductButton";
+import FeaturedRowToggle from "@/features/admin/components/FeaturedRowToggle";
 import ProductFilters from "@/features/admin/components/ProductFilters";
 import ProductPagination from "@/features/admin/components/ProductPagination";
 import StockIndicator from "@/features/admin/components/StockIndicator";
@@ -83,7 +84,7 @@ export default async function AdminInventory({
       <ProductFilters />
 
       <div className="border-border bg-card flex-1 overflow-hidden border transition-shadow duration-500 hover:shadow-[0px_12px_32px_rgba(26,26,26,0.04)]">
-        <Table className="min-w-200">
+        <Table className="min-w-220">
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
@@ -92,6 +93,7 @@ export default async function AdminInventory({
               <TableHead>Price</TableHead>
               <TableHead>Stock Status</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-center">Featured</TableHead>
               <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -99,7 +101,7 @@ export default async function AdminInventory({
             {products.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-muted-foreground py-16 text-center text-sm"
                 >
                   {total === 0 && !params.q && !stock && !status
@@ -161,6 +163,13 @@ export default async function AdminInventory({
                   >
                     {product.status}
                   </span>
+                </TableCell>
+                <TableCell className="py-8">
+                  <FeaturedRowToggle
+                    productId={product.id}
+                    productName={product.name}
+                    featured={product.featured}
+                  />
                 </TableCell>
                 <TableCell className="py-8">
                   <div className="flex items-center justify-center gap-1">

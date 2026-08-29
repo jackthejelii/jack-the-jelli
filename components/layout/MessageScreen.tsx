@@ -118,7 +118,7 @@ export default function MessageScreen({
         <div className="h-10 w-auto">
           <Logo alt="" />
         </div>
-        <span className="sr-only">Jack The Jelli — return home</span>
+        <span className="sr-only">Jack The Jelli: return home</span>
       </Link>
       {content}
     </div>

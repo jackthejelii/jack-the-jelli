@@ -112,7 +112,7 @@ export default function LoginForm({
       if (error.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedEmail(parsed.data.email);
         setFormError(
-          "Verify your email before signing in — check your inbox for the link we sent when you registered.",
+          "Verify your email before signing in. Check your inbox for the link we sent when you registered.",
         );
         return;
       }
@@ -178,7 +178,7 @@ export default function LoginForm({
           <div className="mt-3">
             {resendState === "sent" ? (
               <p className="text-sm">
-                Verification email sent — check your inbox.
+                Verification email sent. Check your inbox.
               </p>
             ) : (
               <button
@@ -207,7 +207,7 @@ export default function LoginForm({
             type="email"
             autoComplete="email"
             aria-invalid={Boolean(errors.email)}
-            placeholder="jane@example.com"
+            placeholder="rafiq@example.com"
             className={boxedInputClassName}
           />
           <FieldError>{errors.email}</FieldError>

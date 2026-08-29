@@ -59,9 +59,13 @@ export default function CartSheet() {
 
   return (
     <Sheet open={isOpen} onOpenChange={setOpen}>
+      {/* The shadcn primitive slides in on `ease-in-out`, which is the one
+          curve the rest of the site never uses. Overridden here rather than in
+          components/ui/sheet.tsx so the primitive stays what the CLI
+          generated: same distance, same duration band, the site's curve. */}
       <SheetContent
         side="right"
-        className="bg-background w-full gap-0 border-l p-0 sm:max-w-md"
+        className="bg-background ease-editorial w-full gap-0 border-l p-0 duration-300 sm:max-w-md"
       >
         <SheetHeader className="border-outline-variant/20 border-b px-6 py-6">
           <SheetTitle className="font-serif text-[24px] leading-tight font-normal tracking-tight">
@@ -126,7 +130,7 @@ export default function CartSheet() {
 
               <p className="text-on-surface-variant mt-2 text-[13px] leading-relaxed">
                 {shortfall > 0
-                  ? `Delivery calculated at checkout — free above ${formatPrice(FREE_DELIVERY_THRESHOLD)}.`
+                  ? `Delivery calculated at checkout. Free above ${formatPrice(FREE_DELIVERY_THRESHOLD)}.`
                   : "Delivery is on us."}
               </p>
 

@@ -22,7 +22,7 @@ export default function DiscoverMoreButton({
         onClick={onClick}
         disabled={isPending}
         aria-label={isPending ? "Loading more pieces" : "Discover more pieces"}
-        className="border-foreground text-foreground hover:bg-foreground hover:text-background inline-flex items-center justify-center gap-2 rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300 disabled:pointer-events-none disabled:opacity-60"
+        className="border-foreground text-foreground hover:bg-foreground hover:text-background ease-editorial inline-flex items-center justify-center gap-2 rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,border-color,transform] duration-(--motion-quick) active:translate-y-px disabled:pointer-events-none disabled:opacity-60"
       >
         {isPending && (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />

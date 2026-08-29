@@ -6,7 +6,7 @@ import CheckoutView from "@/features/checkout/components/CheckoutView";
 
 export const metadata: Metadata = {
   title: "Checkout | Jack The Jelli",
-  description: "Complete your order — cash on delivery across Bangladesh.",
+  description: "Complete your order. Cash on delivery across Bangladesh.",
   // Nothing here should ever be indexed.
   robots: { index: false, follow: false },
 };

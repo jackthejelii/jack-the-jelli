@@ -10,6 +10,14 @@ export type SortOption = (typeof SORT_OPTIONS)[number];
 
 export const DEFAULT_SORT: SortOption = "newest";
 
+/**
+ * Pieces the homepage featured strip will show. A cap, not a target — the
+ * strip renders whatever the admin has flagged, and nothing at all if that is
+ * none. Kept small because a "featured" list long enough to need paging is no
+ * longer a selection.
+ */
+export const FEATURED_LIMIT = 8;
+
 /** Rows the predictive search panel shows before deferring to "See all N". */
 export const SUGGESTION_LIMIT = 6;
 

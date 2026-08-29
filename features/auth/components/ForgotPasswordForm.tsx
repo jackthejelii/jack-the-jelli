@@ -101,7 +101,7 @@ export default function ForgotPasswordForm() {
           type="email"
           autoComplete="email"
           aria-invalid={Boolean(error)}
-          placeholder="jane@example.com"
+          placeholder="rafiq@example.com"
           className={boxedInputClassName}
         />
         <FieldError>{error}</FieldError>

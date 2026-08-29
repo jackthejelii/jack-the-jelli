@@ -75,7 +75,7 @@ export default function CartLine({
 
         {soldOut ? (
           <p className="text-destructive mt-auto pt-3 text-[11px] font-semibold tracking-[0.1em] uppercase">
-            Sold out — please remove
+            Sold out. Please remove
           </p>
         ) : (
           <div className="mt-auto flex items-end justify-between gap-3 pt-3">

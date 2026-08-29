@@ -40,6 +40,8 @@ export interface ProductDTO {
   description?: string;
   stock: number;
   status: ProductStatus;
+  /** Surfaces this product in the homepage featured strip. */
+  featured: boolean;
   thumbnail?: string;
   images: IProductImage[];
   createdAt: string;

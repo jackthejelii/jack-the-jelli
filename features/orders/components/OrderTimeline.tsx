@@ -56,7 +56,7 @@ export default function OrderTimeline({ order }: { order: OrderDTO }) {
         <p className="text-on-surface-variant mt-2 text-[15px] leading-relaxed">
           {ORDER_STATUS_COPY[order.status].description}{" "}
           {cancelled
-            ? "If this is a surprise, please call us — nothing has been charged."
+            ? "If this is a surprise, please call us. Nothing has been charged."
             : "If you're expecting a refund and haven't had it, please call us."}
         </p>
         {stamp && (

@@ -33,6 +33,8 @@ function toProductDTO(product: LeanProduct): ProductDTO {
     description: product.description,
     stock: product.stock,
     status: product.status,
+    // Coerced: documents written before the field existed have no value.
+    featured: Boolean(product.featured),
     thumbnail: product.thumbnail,
     images: (product.images ?? []).map((image) => ({
       url: image.url,

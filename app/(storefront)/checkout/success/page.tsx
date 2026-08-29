@@ -142,9 +142,9 @@ export default async function CheckoutSuccessPage({
               address, so it works even when checkout was completed without
               one. */}
           <p className="text-on-surface-variant mt-2 text-[15px] leading-relaxed">
-            Create an account and this order comes with it — plus every future
-            one — under My Orders. Any email will do; the order is carried
-            across from this browser.
+            Create an account and this order comes with it, plus every future
+            one, under My Orders. Any email will do; the order is carried across
+            from this browser.
           </p>
           <Link
             href={`/register?claim=${encodeURIComponent(order.orderNumber)}`}

@@ -38,8 +38,8 @@ export default function PrivacyPolicyPage() {
         Checkout does not require an account. To deliver an order and confirm it
         by phone we ask for your full name, phone number, delivery address
         (division, district, upazila or thana, and street) and any delivery
-        notes you choose to add. An email address is optional — we use it only
-        to send your order confirmation.
+        notes you choose to add. An email address is optional, and we use it
+        only to send your order confirmation.
       </p>
       <p>
         We also store the order itself: the items, quantities, prices at the
@@ -49,8 +49,8 @@ export default function PrivacyPolicyPage() {
 
       <h3>When you create an account</h3>
       <p>
-        An account stores your name, your email address, and — if you register
-        with a password — a cryptographic hash of that password. We never store
+        An account stores your name, your email address, and (if you register
+        with a password) a cryptographic hash of that password. We never store
         the password itself. If you sign in with Google instead, Google tells us
         your name, email address and profile picture; we request nothing more,
         and we never gain access to your Gmail, contacts or Drive.
@@ -89,25 +89,25 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>Vercel</strong> — hosts the website and keeps standard server
+          <strong>Vercel</strong>: hosts the website and keeps standard server
           logs.
         </li>
         <li>
-          <strong>MongoDB Atlas</strong> — stores orders, accounts and baskets.
+          <strong>MongoDB Atlas</strong>: stores orders, accounts and baskets.
         </li>
         <li>
-          <strong>Resend</strong> — sends order confirmations, email
-          verification and password-reset messages.
+          <strong>Resend</strong>: sends order confirmations, email verification
+          and password-reset messages.
         </li>
         <li>
-          <strong>Google</strong> — only if you choose to sign in with Google.
+          <strong>Google</strong>: only if you choose to sign in with Google.
         </li>
         <li>
-          <strong>Cloudinary</strong> — serves our product photographs. It
+          <strong>Cloudinary</strong>: serves our product photographs. It
           receives no customer information.
         </li>
         <li>
-          <strong>Our delivery courier</strong> — receives your name, phone
+          <strong>Our delivery courier</strong>: receives your name, phone
           number and address, because it cannot deliver without them.
         </li>
       </ul>

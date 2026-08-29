@@ -18,9 +18,15 @@ import { cn } from "@/lib/utils";
  * assembling itself.
  *
  * Renders a plain `div`, so it can take over the classes of the wrapper it
- * replaces rather than adding a level to the tree — which matters in
- * `CraftsmanshipGrid`, where the revealing elements are grid items and an
- * extra wrapper would break the layout.
+ * replaces rather than adding a level to the tree — which matters wherever
+ * the revealing elements are grid items and an extra wrapper would break the
+ * layout.
+ *
+ * `group` inverts the arrangement: the element becomes the *trigger* for the
+ * `RevealItem`s inside it instead of animating itself. That is what a
+ * horizontal scroller needs — a slide parked off the right edge of the
+ * viewport never intersects it, so a per-item observer would leave those
+ * slides invisible until the shopper had already scrolled to them.
  */
 
 /*
@@ -69,6 +75,7 @@ export default function Reveal({
   className,
   index = 0,
   delay,
+  group = false,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -76,6 +83,12 @@ export default function Reveal({
   index?: number;
   /** Explicit delay in ms. Overrides `index` — use only outside a sequence. */
   delay?: number;
+  /**
+   * Trigger mode: this element stays visible and reveals the `RevealItem`s
+   * beneath it, rather than animating itself. `index` and `delay` belong to
+   * the items in this mode and are ignored here.
+   */
+  group?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [revealed, setRevealed] = useState(false);
@@ -90,13 +103,46 @@ export default function Reveal({
     <div
       ref={ref}
       data-revealed={revealed ? "true" : undefined}
-      className={cn("reveal", className)}
+      className={cn(group ? "reveal-group" : "reveal", className)}
+      // Deliberately unset in group mode: --reveal-delay inherits, so a value
+      // here would become the fallback for every item that didn't set its own.
+      style={
+        group
+          ? undefined
+          : ({
+              "--reveal-delay":
+                delay !== undefined
+                  ? `${delay}ms`
+                  : `calc(${index} * var(--motion-stagger))`,
+            } as React.CSSProperties)
+      }
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * One member of a `<Reveal group>`. Carries its own place in the stagger but
+ * none of the observation — it waits for the group around it.
+ */
+export function RevealItem({
+  children,
+  className,
+  index = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** Position within the group; each step waits one `--motion-stagger` longer. */
+  index?: number;
+}) {
+  return (
+    <div
+      data-reveal-item=""
+      className={className}
       style={
         {
-          "--reveal-delay":
-            delay !== undefined
-              ? `${delay}ms`
-              : `calc(${index} * var(--motion-stagger))`,
+          "--reveal-delay": `calc(${index} * var(--motion-stagger))`,
         } as React.CSSProperties
       }
     >

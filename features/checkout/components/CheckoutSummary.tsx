@@ -111,7 +111,7 @@ export default function CheckoutSummary({
             {unavailable.map((line) => (
               <li key={line.productId} className="text-[14px]">
                 <p className="text-foreground">
-                  {line.name} —{" "}
+                  {line.name}:{" "}
                   {line.available === 0
                     ? "sold out"
                     : `only ${line.available} left, you asked for ${line.requested}`}

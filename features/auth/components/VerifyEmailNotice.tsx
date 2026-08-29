@@ -27,7 +27,7 @@ const VERIFY_ERRORS: Record<string, { heading: string; body: string }> = {
   },
   USER_NOT_FOUND: {
     heading: "Account Not Found",
-    body: "We couldn't find an account for that link. It may have been removed — create a new account to continue.",
+    body: "We couldn't find an account for that link. It may have been removed. Create a new account to continue.",
   },
 };
 
@@ -124,13 +124,13 @@ export default function VerifyEmailNotice({
 
       {claimed && !failure && (
         <p className="text-on-surface-variant text-sm">
-          Your order is already attached — it will be under My Orders as soon as
+          Your order is already attached. It will be under My Orders as soon as
           you verify.
         </p>
       )}
 
       {sent ? (
-        <p className="text-sm">Verification email sent — check your inbox.</p>
+        <p className="text-sm">Verification email sent. Check your inbox.</p>
       ) : (
         <form onSubmit={handleResend} className="flex flex-col gap-4 text-left">
           {(failure || !initialEmail) && (
@@ -146,7 +146,7 @@ export default function VerifyEmailNotice({
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="jane@example.com"
+                placeholder="rafiq@example.com"
                 className={boxedInputClassName}
               />
             </Field>
@@ -172,7 +172,7 @@ export default function VerifyEmailNotice({
           leaves this screen as the dead end unless it says so. */}
       {!failure && (
         <p className="text-muted-foreground text-sm">
-          Nothing arriving? This address may already have an account —{" "}
+          Nothing arriving? This address may already have an account:{" "}
           <Link
             href="/login"
             className="text-foreground underline underline-offset-4"

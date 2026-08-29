@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDirtyGuard } from "@/features/admin/hooks/useDirtyGuard";
 import { useProductSubmit } from "@/features/admin/hooks/useProductSubmit";
 import CategorySelect from "@/features/admin/components/CategorySelect";
+import FeaturedToggle from "@/features/admin/components/FeaturedToggle";
 import ProductFormSection from "@/features/admin/components/ProductFormSection";
 import ProductMediaUploader, {
   type ProductMediaUploaderHandle,
@@ -239,6 +240,16 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
             />
             <FieldError>{errors?.stock}</FieldError>
           </Field>
+        </ProductFormSection>
+
+        <ProductFormSection
+          title="Homepage Placement"
+          description="Whether this piece is part of the selection shown on the front page."
+        >
+          <FeaturedToggle
+            defaultChecked={state.values?.featured === "on"}
+            onDirty={markDirty}
+          />
         </ProductFormSection>
 
         <ProductFormSection

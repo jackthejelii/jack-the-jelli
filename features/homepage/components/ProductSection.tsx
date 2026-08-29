@@ -22,18 +22,12 @@ export default function ProductSection() {
                 relationship between siblings, so it has to be scoped to the
                 group that is actually read together. */}
             <Reveal index={0}>
-              <span className="text-on-surface-variant mb-4 block text-[12px] font-semibold tracking-widest uppercase">
-                01 / Signature
-              </span>
-            </Reveal>
-
-            <Reveal index={1}>
               <h2 className="text-foreground mb-6 font-serif text-[32px] leading-[1.3]">
                 The Flame Bifold
               </h2>
             </Reveal>
 
-            <Reveal index={2}>
+            <Reveal index={1}>
               <p className="text-on-surface-variant mb-8 max-w-sm text-[18px] leading-[1.6]">
                 Hand-embossed with a flame motif, this bifold is our signature
                 piece. Full-grain leather that deepens with time. Six card
@@ -43,10 +37,10 @@ export default function ProductSection() {
 
             <AppLink
               href="/collection?category=flame-wallet"
-              className="text-foreground border-foreground hover:border-on-surface-variant hover:text-on-surface-variant ease-editorial inline-flex w-fit items-center gap-2 border-b pb-1 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
+              className="text-foreground border-foreground hover:border-on-surface-variant hover:text-on-surface-variant ease-editorial group inline-flex w-fit items-center gap-2 border-b pb-1 text-[12px] font-semibold tracking-widest uppercase transition-[color,border-color,transform] duration-(--motion-quick) active:translate-y-px"
             >
               Discover Flame
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="ease-editorial h-4 w-4 transition-transform duration-(--motion-quick) group-hover:translate-x-1" />
             </AppLink>
           </div>
 
@@ -75,12 +69,6 @@ export default function ProductSection() {
       <section className="bg-surface-container-low w-full py-32">
         <div className="mx-auto max-w-360 px-5 text-center md:px-16">
           <Reveal index={0}>
-            <span className="text-on-surface-variant mb-4 block text-[12px] font-semibold tracking-widest uppercase">
-              02 / Classic
-            </span>
-          </Reveal>
-
-          <Reveal index={1}>
             <h2 className="text-foreground mb-12 font-serif text-[32px] leading-[1.3]">
               The Regular Bifold
             </h2>
@@ -104,7 +92,7 @@ export default function ProductSection() {
           </div>
 
           <div className="mt-12">
-            <Reveal index={2}>
+            <Reveal index={1}>
               <p className="text-on-surface-variant mx-auto mb-8 max-w-2xl text-[18px] leading-[1.6]">
                 Clean lines, no embellishment. A timeless bifold in full-grain
                 leather for those who prefer understated elegance.
@@ -113,7 +101,7 @@ export default function ProductSection() {
 
             <AppLink
               href="/collection?category=regular-wallet"
-              className="border-foreground text-foreground hover:bg-foreground hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
+              className="border-foreground text-foreground hover:bg-foreground hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,border-color,transform] duration-(--motion-quick) active:translate-y-px"
             >
               View Classic
             </AppLink>

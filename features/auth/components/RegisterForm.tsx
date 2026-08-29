@@ -164,7 +164,7 @@ export default function RegisterForm({
             name="name"
             autoComplete="name"
             aria-invalid={Boolean(errors.name)}
-            placeholder="Jane Doe"
+            placeholder="Rafiq Ahmed"
             className={boxedInputClassName}
           />
           <FieldError>{errors.name}</FieldError>
@@ -181,7 +181,7 @@ export default function RegisterForm({
             autoComplete="email"
             defaultValue={defaultEmail}
             aria-invalid={Boolean(errors.email)}
-            placeholder="jane@example.com"
+            placeholder="rafiq@example.com"
             className={boxedInputClassName}
           />
           <FieldError>{errors.email}</FieldError>

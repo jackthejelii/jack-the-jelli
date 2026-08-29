@@ -2,6 +2,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CategorySelect from "@/features/admin/components/CategorySelect";
+import FeaturedToggle from "@/features/admin/components/FeaturedToggle";
 import type { CategoryOption } from "@/features/admin/lib/category-schema";
 import type { ProductDTO } from "@/features/admin/lib/types";
 import {
@@ -112,6 +113,19 @@ export default function ProductDetailsForm({
             </Field>
           </div>
         </div>
+      </section>
+
+      <section>
+        <h3 className="border-border font-heading text-foreground mb-8 border-b pb-4 text-2xl">
+          Homepage Placement
+        </h3>
+        <FeaturedToggle
+          // `values` only carries a key for `featured` when the box was ticked
+          // on the rejected submit, so its absence is a deliberate "unticked"
+          // — fall back to the saved product only when nothing was submitted.
+          defaultChecked={values ? values.featured === "on" : product.featured}
+          onDirty={onDirty}
+        />
       </section>
 
       <section>

@@ -14,6 +14,7 @@ export const PRODUCT_VALUE_FIELDS = [
   "price",
   "stock",
   "description",
+  "featured",
 ] as const;
 
 // FormData yields strings for everything (§6.7), so numbers get coerced rather
@@ -41,6 +42,17 @@ const optionalNumberField = (label: string, fallback: number) =>
       return trimmed && trimmed.length > 0 ? trimmed : String(fallback);
     })
     .pipe(numberField(label));
+
+/**
+ * An unchecked checkbox is absent from FormData entirely, so "missing" is the
+ * false case rather than a validation failure. `"on"` is what a native
+ * checkbox submits; `"true"` is accepted so the echoed-back value from a
+ * failed submit round-trips.
+ */
+const checkboxField = z
+  .string()
+  .optional()
+  .transform((value) => value === "on" || value === "true");
 
 export const productImageSchema = z.object({
   url: z.url("An uploaded image has an invalid URL"),
@@ -93,6 +105,7 @@ export const createProductSchema = z.object({
     .optional()
     .transform((value) => (value && value.length > 0 ? value : undefined)),
   images: imagesField,
+  featured: checkboxField,
   intent: productIntentSchema,
 });
 
@@ -103,6 +116,16 @@ export const updateProductSchema = createProductSchema.extend({
 /** Shared by archiveProduct/restoreProduct — status-only mutations need no other field. */
 export const productIdSchema = z.object({
   id: z.string().trim().regex(OBJECT_ID_PATTERN, "Unknown product"),
+});
+
+/**
+ * The Featured column on the inventory table: an id plus the state being moved
+ * to. The next state is sent explicitly rather than inferred as "flip it" so
+ * two quick clicks, or a stale row, can't land on the opposite of what the
+ * admin saw when they clicked.
+ */
+export const productFeaturedSchema = productIdSchema.extend({
+  featured: checkboxField,
 });
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
@@ -125,6 +148,7 @@ export function readProductFormData(formData: FormData) {
     stock: get("stock"),
     description: get("description"),
     images: get("images") ?? "[]",
+    featured: get("featured"),
     intent: get("intent"),
   };
 }

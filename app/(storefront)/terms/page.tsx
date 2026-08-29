@@ -5,7 +5,7 @@ import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 export const metadata: Metadata = {
   title: "Terms of Service | Jack The Jelli",
   description:
-    "The terms you agree to when you order from Jack The Jelli — ordering, cash on delivery, delivery across Bangladesh, cancellations and returns.",
+    "The terms you agree to when you order from Jack The Jelli: ordering, cash on delivery, delivery across Bangladesh, cancellations and returns.",
 };
 
 /**
@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
       <p>
         By placing an order at jackthejelli.com you agree to what follows. We
         are {LEGAL_INFO.legalName}, of {LEGAL_INFO.address}. If anything here is
-        unclear, ask us before you order — {LEGAL_INFO.contactPhone} or{" "}
+        unclear, ask us before you order: {LEGAL_INFO.contactPhone} or{" "}
         <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
           {LEGAL_INFO.contactEmail}
         </a>
@@ -44,7 +44,7 @@ export default function TermsOfServicePage() {
         before it is prepared. The sale is made when we confirm it.
       </p>
       <p>
-        We may decline or cancel an order — for example if an item has sold out,
+        We may decline or cancel an order, for example if an item has sold out,
         if a price was listed in error, or if we cannot reach you to confirm.
         Nothing has been charged at that point, because payment is taken on
         delivery.
@@ -69,7 +69,7 @@ export default function TermsOfServicePage() {
       <h2>Delivery</h2>
       <p>
         We deliver across Bangladesh through a courier. Delivery times quoted
-        anywhere on this site are estimates, not guarantees — they depend on the
+        anywhere on this site are estimates, not guarantees. They depend on the
         courier, the address, and occasionally on weather or holidays.
       </p>
       <p>
@@ -97,7 +97,7 @@ export default function TermsOfServicePage() {
       </p>
       <p>
         Leather is a natural material. Grain, colour and markings vary from
-        piece to piece and darken with use — that variation is a property of the
+        piece to piece and darken with use. That variation is a property of the
         material, not a fault, and product photographs are representative rather
         than exact.
       </p>

@@ -5,7 +5,12 @@ import heroImage from "@/public/hero-image.webp";
 
 export default function HeroSection() {
   return (
-    <header className="bg-surface-container relative flex h-screen min-h-200 w-full items-center justify-center overflow-hidden">
+    // min-h-dvh rather than h-screen: `vh` is measured against the tallest
+    // viewport a mobile browser can have, so with the URL bar showing the hero
+    // was always taller than the screen. The old min-h-200 floor (800px) did
+    // the same thing on a laptop — it pushed the call to action below the fold
+    // on anything shorter, which is most 1366×768 screens.
+    <header className="bg-surface-container relative flex min-h-dvh w-full items-center justify-center overflow-hidden">
       {/* Background image. This is the LCP element, so it is never deferred:
           a Suspense boundary would only delay it, since next/image doesn't
           suspend and the bytes are what cost time, not a data fetch. What
@@ -20,7 +25,13 @@ export default function HeroSection() {
           fill
           sizes="100vw"
           placeholder="blur"
-          className="origin-center scale-105 object-cover transition-transform duration-[10s] ease-out hover:scale-100"
+          // Lands at 1.06 and settles to true scale once, on load — see
+          // `hero-settle` in app/globals.css. The previous version parked the
+          // image at scale-105 and unwound it over ten seconds *on hover*,
+          // which meant the movement only ever played for a visitor whose
+          // cursor happened to rest on the photograph, and reversed when it
+          // left.
+          className="hero-settle object-cover"
           // priority is deprecated in Next 16 — see ProductGallery.tsx.
           loading="eager"
           fetchPriority="high"
@@ -51,7 +62,7 @@ export default function HeroSection() {
         <Reveal index={2}>
           <AppLink
             href="/collection"
-            className="bg-foreground text-background hover:bg-foreground/90 ease-editorial inline-flex items-center justify-center rounded-none px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
+            className="bg-foreground text-background hover:bg-foreground/90 ease-editorial inline-flex items-center justify-center rounded-none px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,transform] duration-(--motion-quick) active:translate-y-px"
           >
             Explore Collection
           </AppLink>

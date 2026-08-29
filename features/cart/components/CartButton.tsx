@@ -39,11 +39,16 @@ export default function CartButton() {
     <button
       type="button"
       onClick={openCart}
+      // Where an added piece flies to — features/cart/lib/fly-to-cart.ts finds
+      // it by this attribute rather than by a ref, since the thing being
+      // animated is a detached clone in `document.body`, not part of any tree
+      // this button shares.
+      data-cart-target=""
       // Negative margin holds the icon in place while the padding gives it a
       // 40px hit area; bare, it was a 20px target.
       className="text-foreground focus-visible:ring-ring/50 ease-editorial relative -m-2.5 p-2.5 outline-hidden transition-opacity duration-(--motion-quick) hover:opacity-70 focus-visible:ring-3"
       aria-label={
-        count === 0 ? "Cart — empty" : `Cart — ${count} pieces. Open cart.`
+        count === 0 ? "Cart: empty" : `Cart: ${count} pieces. Open cart.`
       }
     >
       <ShoppingBag className="h-5 w-5" aria-hidden="true" />

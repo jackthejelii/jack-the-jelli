@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
+import Reveal from "@/components/layout/Reveal";
 
 const supportLinks = [
   { label: "Privacy Policy", href: "/privacy" },
@@ -9,10 +10,13 @@ const supportLinks = [
 export default function Footer() {
   return (
     <footer className="border-t border-[rgba(138,121,104,0.2)]">
-      <div className="mx-auto max-w-360 px-5 pt-10 pb-4 md:px-16 md:pt-16 md:pb-8">
+      {/* Takes over the container's classes rather than wrapping it, so the
+          footer keeps the same DOM it had. The whole block arrives as one
+          piece: it is a sign-off, not a sequence. */}
+      <Reveal className="mx-auto max-w-360 px-5 pt-10 pb-4 md:px-16 md:pt-16 md:pb-8">
         {/* Centered: logo */}
         <div className="flex justify-center">
-          <Link href="#" className="w-30 transition-opacity hover:opacity-80">
+          <Link href="/" className="w-30 transition-opacity hover:opacity-80">
             <Logo priority />
           </Link>
         </div>
@@ -37,7 +41,7 @@ export default function Footer() {
             © 2026 JACK THE JELLI
           </span>
         </div>
-      </div>
+      </Reveal>
     </footer>
   );
 }
