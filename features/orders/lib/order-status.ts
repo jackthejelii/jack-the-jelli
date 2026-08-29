@@ -93,27 +93,9 @@ export function predecessorsOf(to: OrderStatus): OrderStatus[] {
   return ORDER_STATUSES.filter((from) => ALLOWED_NEXT[from].includes(to));
 }
 
-export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-  return ALLOWED_NEXT[from].includes(to);
-}
-
 export function isTerminal(status: OrderStatus): boolean {
   return ALLOWED_NEXT[status].length === 0;
 }
-
-/**
- * Statuses that still hold decremented stock — cancelling one restores it.
- * Returned is on the list because a return that declined restocking (a
- * defective piece, say) leaves its units committed on purpose.
- */
-export const STOCK_COMMITTED_STATUSES = [
-  "Draft",
-  "Pending",
-  "Confirmed",
-  "Shipped",
-  "Delivered",
-  "Returned",
-] as const satisfies readonly OrderStatus[];
 
 interface StatusCopy {
   /** Customer-facing name. "Pending" means nothing to a buyer. */

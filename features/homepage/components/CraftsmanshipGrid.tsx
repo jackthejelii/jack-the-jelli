@@ -1,8 +1,6 @@
-"use client";
-
 import Image from "next/image";
 import { Gem } from "lucide-react";
-import { useInView } from "@/lib/hooks/useInView";
+import Reveal from "@/components/layout/Reveal";
 
 // TODO: Replace with actual images once we have them
 
@@ -14,26 +12,26 @@ const craftsmanshipImages = {
 };
 
 export default function CraftsmanshipGrid() {
-  const { ref: ref1, isVisible: vis1 } = useInView({}, "-50px");
-  const { ref: ref2, isVisible: vis2 } = useInView({}, "-50px");
-  const { ref: ref3, isVisible: vis3 } = useInView({}, "-50px");
-
   return (
     <section
       id="craftsmanship"
       className="mx-auto max-w-360 px-5 py-32 md:px-16"
     >
       {/* Header */}
-      <h2 className="text-foreground mb-12 text-center font-serif text-3xl leading-[1.3]">
-        Uncompromising Quality
-      </h2>
+      <Reveal index={0}>
+        <h2 className="text-foreground mb-12 text-center font-serif text-3xl leading-[1.3]">
+          Uncompromising Quality
+        </h2>
+      </Reveal>
 
-      {/* Bento grid */}
+      {/* Bento grid. Reveal takes over each tile's own classes rather than
+          wrapping it — these are grid items, and an extra element between the
+          grid and its children would break the layout. */}
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         {/* Large image box */}
-        <div
-          ref={ref1}
-          className={`group relative overflow-hidden border border-[rgba(138,121,104,0.2)] transition-all duration-1000 md:h-125 ${vis1 ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+        <Reveal
+          index={1}
+          className="group relative overflow-hidden border border-[rgba(138,121,104,0.2)] md:h-125"
         >
           {craftsmanshipImages.process ? (
             <Image
@@ -42,7 +40,7 @@ export default function CraftsmanshipGrid() {
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               loading="lazy"
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="ease-editorial object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-white/50">
@@ -57,29 +55,32 @@ export default function CraftsmanshipGrid() {
               Every piece takes time.
             </p>
           </div>
-        </div>
+        </Reveal>
 
         {/* Two stacked boxes */}
         <div className="grid h-full grid-rows-2 gap-8">
-          {/* Icon + text box */}
-          <div
-            ref={ref2}
-            className={`bg-surface-container flex flex-1 flex-col justify-center border border-[rgba(138,121,104,0.2)] p-8 transition-shadow duration-300 hover:shadow-[0px_12px_32px_rgba(26,26,26,0.04)] ${vis2 ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
-          >
-            <Gem className="text-foreground mb-6 h-8 w-8" />
-            <h3 className="text-foreground mb-2 text-[18px] leading-[1.6] font-semibold">
-              Vegetable Tanned
-            </h3>
-            <p className="text-on-surface-variant text-[16px] leading-[1.6]">
-              Sourced from the finest tanneries in Tuscany, utilizing organic
-              tannins for a superior finish.
-            </p>
-          </div>
+          {/* Icon + text box. The hover shadow is a separate transition from
+              the entrance, so it is declared on an inner element: putting
+              `transition-shadow` on the tile itself is what previously stopped
+              this box revealing at all — it overrode the entrance transition,
+              leaving the opacity and translate to snap. */}
+          <Reveal index={2} className="flex flex-1 flex-col">
+            <div className="bg-surface-container ease-editorial flex flex-1 flex-col justify-center border border-[rgba(138,121,104,0.2)] p-8 transition-shadow duration-(--motion-quick) hover:shadow-[0px_12px_32px_rgba(26,26,26,0.04)]">
+              <Gem className="text-foreground mb-6 h-8 w-8" />
+              <h3 className="text-foreground mb-2 text-[18px] leading-[1.6] font-semibold">
+                Vegetable Tanned
+              </h3>
+              <p className="text-on-surface-variant text-[16px] leading-[1.6]">
+                Sourced from the finest tanneries in Tuscany, utilizing organic
+                tannins for a superior finish.
+              </p>
+            </div>
+          </Reveal>
 
           {/* Stitching image box */}
-          <div
-            ref={ref3}
-            className={`group relative aspect-2/1 flex-1 overflow-hidden border border-[rgba(138,121,104,0.2)] bg-(--surface-container) transition-all duration-1000 md:aspect-auto ${vis3 ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}
+          <Reveal
+            index={3}
+            className="group relative aspect-2/1 flex-1 overflow-hidden border border-[rgba(138,121,104,0.2)] bg-(--surface-container) md:aspect-auto"
           >
             {craftsmanshipImages.stitching ? (
               <Image
@@ -88,7 +89,7 @@ export default function CraftsmanshipGrid() {
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 loading="lazy"
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="ease-editorial object-cover transition-transform duration-700 group-hover:scale-105"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-(--on-surface-variant)">
@@ -100,7 +101,7 @@ export default function CraftsmanshipGrid() {
                 Saddle Stitched
               </h3>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>

@@ -22,7 +22,7 @@ import type {
 // Server-only: pulls in Mongoose. Everything here returns plain, serializable
 // objects because Mongoose docs don't cross the server/client boundary (§6.3).
 
-export const ORDERS_PER_PAGE = 10;
+const ORDERS_PER_PAGE = 10;
 
 /** How long a Draft may hold stock before the sweep may release it. */
 export const STALE_DRAFT_MINUTES = 15;

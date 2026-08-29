@@ -61,7 +61,7 @@ export default function AddToCartButton({
       onClick={handleClick}
       disabled={soldOut}
       className={cn(
-        "bg-foreground text-background hover:bg-secondary group inline-flex items-center justify-center gap-2 rounded-none text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300 disabled:pointer-events-none disabled:opacity-40",
+        "bg-foreground text-background hover:bg-secondary ease-editorial group inline-flex items-center justify-center gap-2 rounded-none text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick) disabled:pointer-events-none disabled:opacity-40",
         variant === "detail" ? "w-full py-4" : "w-full px-3 py-3",
         className,
       )}
@@ -69,7 +69,7 @@ export default function AddToCartButton({
       {soldOut ? "Sold out" : "Add to cart"}
       {variant === "detail" && !soldOut && (
         <ArrowRight
-          className="size-4 transition-transform duration-300 group-hover:translate-x-1"
+          className="ease-editorial size-4 transition-transform duration-(--motion-quick) group-hover:translate-x-1"
           aria-hidden="true"
         />
       )}

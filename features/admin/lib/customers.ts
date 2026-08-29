@@ -18,7 +18,7 @@ import type { CustomerDTO } from "@/features/admin/lib/customer-types";
 // all; those buyers show up on the orders screen, and are folded into a row
 // here only once they sign up and claimGuestOrders attaches their history.
 
-export const CUSTOMERS_PER_PAGE = 10;
+const CUSTOMERS_PER_PAGE = 10;
 
 /**
  * Orders that count toward lifetime value.

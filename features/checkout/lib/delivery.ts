@@ -89,11 +89,6 @@ export const DIVISIONS = Object.keys(
   DISTRICTS_BY_DIVISION,
 ) as (keyof typeof DISTRICTS_BY_DIVISION)[];
 
-/** Flat list, for validation. */
-export const DISTRICTS: readonly string[] = DIVISIONS.flatMap(
-  (division) => DISTRICTS_BY_DIVISION[division],
-);
-
 const DIVISION_BY_DISTRICT = new Map<string, string>(
   DIVISIONS.flatMap((division) =>
     DISTRICTS_BY_DIVISION[division].map(
@@ -123,14 +118,9 @@ export type DeliveryZone = (typeof DELIVERY_ZONES)[number];
 /** Same-city courier rates only apply within Dhaka district itself. */
 const INSIDE_DHAKA_DISTRICTS = new Set(["Dhaka"]);
 
-export const DELIVERY_FEES: Record<DeliveryZone, number> = {
+const DELIVERY_FEES: Record<DeliveryZone, number> = {
   "inside-dhaka": 60,
   "outside-dhaka": 120,
-};
-
-export const DELIVERY_ZONE_LABELS: Record<DeliveryZone, string> = {
-  "inside-dhaka": "Inside Dhaka",
-  "outside-dhaka": "Outside Dhaka",
 };
 
 /** Subtotal (in taka) at or above which delivery is on us. */

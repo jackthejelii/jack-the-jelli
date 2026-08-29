@@ -32,6 +32,28 @@ store rather than the store.
 replaces it should give a visitor something to do or something that moves —
 that stretch of the page currently earns no attention and converts nothing.
 
+### 4. A product needs to come in more than one colour
+
+The brand's next natural move — the same wallet in black and tan — has nowhere
+to live. This is not a display detail: `Product` carries one `sku` and one
+`stock` number, the cart keys a line by `productId` alone (`setQty` and
+`removeItem` take nothing else), and an order line snapshots a single
+name/SKU/price. A colour therefore changes what a cart line *is*, which stock
+count gets decremented, and what the receipt says it sold. Worth settling one
+question before any code: is a colour a variant inside one product, or its own
+product sharing a page?
+
+### 5. A featured-products carousel on the homepage
+
+Nothing on the front page moves or invites browsing — the visitor either clicks
+"Explore Collection" or leaves. A featured strip that animates (motion-primitives
+or Watermelon UI were the two shortlisted; **confirm Watermelon's licence first**,
+its site refused to serve terms) would give the homepage something to do.
+
+Depends on #2: it has to be a real query, not a second hardcoded strip, or it
+inherits the same problem. Also needs a way to mark a product as featured — the
+unused `tags` field on the schema is the obvious candidate.
+
 ---
 
 ## Also worth doing
@@ -62,6 +84,16 @@ that stretch of the page currently earns no attention and converts nothing.
 - [ ] **Sale pricing and tags are invisible.** `comparePrice` and `tags` exist
       on the product schema with no form control and no storefront display, so
       there is no way to run a discount or group products beyond category.
+- [ ] **The product image has no loading state.** On the detail page the gallery
+      box is just page background until the Cloudinary image decodes, so a slow
+      connection shows an empty square with nothing to say a photo is on its
+      way — on a page whose whole job is the photograph. `ProductCard` has the
+      same gap.
+- [ ] **The avatar pops in twice.** While the session resolves, `UserMenu`
+      renders an empty 32px gap; the moment it resolves the Radix fallback
+      paints the initials, then the Google-hosted photo replaces them when it
+      arrives. Two visible swaps in the navbar on every load, and neither of
+      them reads as loading.
 
 ### Admin and operations
 
@@ -71,8 +103,6 @@ that stretch of the page currently earns no attention and converts nothing.
 - [ ] **Low stock is visible only if you go looking for it.** Nothing surfaces a
       product about to run out, so the first signal is a customer failing to buy
       it.
-- [ ] **Products have no variants.** One stock number per product, which is fine
-      for wallets and blocks the first colour or size the brand introduces.
 
 ### Housekeeping
 

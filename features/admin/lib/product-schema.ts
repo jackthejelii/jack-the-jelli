@@ -66,7 +66,7 @@ const imagesField = z.preprocess(
 );
 
 /** Which button was pressed (D4) — decides the persisted status. */
-export const productIntentSchema = z
+const productIntentSchema = z
   .enum(["draft", "publish"])
   .optional()
   .default("draft");

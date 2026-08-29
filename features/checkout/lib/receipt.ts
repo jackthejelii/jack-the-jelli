@@ -47,7 +47,7 @@ function verify(payload: string, signature: string): boolean {
   return timingSafeEqual(expected, actual);
 }
 
-export async function readReceipt(): Promise<ReceiptEntry[]> {
+async function readReceipt(): Promise<ReceiptEntry[]> {
   const raw = (await cookies()).get(COOKIE_NAME)?.value;
   if (!raw) return [];
 

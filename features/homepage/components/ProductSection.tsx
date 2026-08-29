@@ -1,9 +1,7 @@
-"use client";
-
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import { useInView } from "@/lib/hooks/useInView";
 import AppLink from "@/components/layout/AppLink";
+import Reveal from "@/components/layout/Reveal";
 
 // TODO: Remove this once we have a proper image service
 
@@ -14,72 +12,38 @@ const regularImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCGsD0T_IBGaLXNSbF6aA2nFDdW4mMG9CtVwXXzatVVVjnjvkgf6XSWkA5tkEyJkp7hOZjk7fzJzOVkrv57e_1M_mPRJGFGLww2IaGBMfkg_7otGwbVddyCMvrfUZ-6hz5FZ4Vo3MrqssbPDcpldUGweGbUfiKUzOM4LjjvfkYn8n2-akp5kyzJ5PgS0lWzAueIWvwMPsYP1HI7jSzjxXIIvCYj0ZU3GV0lbMCaOr1HbFiZnDLuvkYP-QY225sPAJVp0q0uWVJjtq-I";
 
 export default function ProductSection() {
-  // FIX: Changed rootMargin from "-50px" to "-150px".
-  // This triggers the observer earlier, preventing the "late" appearance.
-  const { ref: ref1, isVisible: vis1 } = useInView({}, "5px");
-  const { ref: ref2, isVisible: vis2 } = useInView({}, "5px");
-  const { ref: ref3, isVisible: vis3 } = useInView({}, "5px");
-  const { ref: ref4, isVisible: vis4 } = useInView({}, "5px");
-  const { ref: ref5, isVisible: vis5 } = useInView({}, "5px");
-  const { ref: ref6, isVisible: vis6 } = useInView({}, "5px");
-
-  // Common transition classes for performance
-  const baseTransition =
-    "transition-[opacity,transform] duration-1000 delay-[100ms]";
-
   return (
     <>
       {/* --- Flame Wallet (Main) --- */}
       <section className="mx-auto my-32 max-w-360 px-5 md:px-16">
         <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-12">
           <div className="order-2 mt-12 flex flex-col justify-center md:order-1 md:col-span-4 md:col-start-2 md:mt-0">
-            {/* --- ENTRY 1 --- */}
-            <div
-              ref={ref1}
-              className={`${baseTransition} ${
-                vis1
-                  ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                  : "translate-y-10 opacity-0"
-              }`}
-            >
+            {/* The index restarts at 0 in each section: the stagger describes a
+                relationship between siblings, so it has to be scoped to the
+                group that is actually read together. */}
+            <Reveal index={0}>
               <span className="text-on-surface-variant mb-4 block text-[12px] font-semibold tracking-widest uppercase">
                 01 / Signature
               </span>
-            </div>
+            </Reveal>
 
-            {/* --- ENTRY 2 --- */}
-            <div
-              ref={ref2}
-              className={`${baseTransition} delay-150 ${
-                vis2
-                  ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                  : "translate-y-10 opacity-0"
-              }`}
-            >
+            <Reveal index={1}>
               <h2 className="text-foreground mb-6 font-serif text-[32px] leading-[1.3]">
                 The Flame Bifold
               </h2>
-            </div>
+            </Reveal>
 
-            {/* --- ENTRY 3 --- */}
-            <div
-              ref={ref3}
-              className={`${baseTransition} delay-300 ${
-                vis3
-                  ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                  : "translate-y-10 opacity-0"
-              }`}
-            >
+            <Reveal index={2}>
               <p className="text-on-surface-variant mb-8 max-w-sm text-[18px] leading-[1.6]">
                 Hand-embossed with a flame motif, this bifold is our signature
                 piece. Full-grain leather that deepens with time. Six card
                 slots, one unlined bill compartment.
               </p>
-            </div>
+            </Reveal>
 
             <AppLink
               href="/collection?category=flame-wallet"
-              className="text-foreground border-foreground hover:border-on-surface-variant hover:text-on-surface-variant inline-flex w-fit items-center gap-2 border-b pb-1 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300"
+              className="text-foreground border-foreground hover:border-on-surface-variant hover:text-on-surface-variant ease-editorial inline-flex w-fit items-center gap-2 border-b pb-1 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
             >
               Discover Flame
               <ArrowRight className="h-4 w-4" />
@@ -87,7 +51,7 @@ export default function ProductSection() {
           </div>
 
           <div className="order-1 md:order-2 md:col-span-5 md:col-start-8">
-            <div className="group will-change-opacity bg-surface-container relative aspect-4/5 overflow-hidden border border-[rgba(138,121,104,0.2)] will-change-transform">
+            <div className="group bg-surface-container relative aspect-4/5 overflow-hidden border border-[rgba(138,121,104,0.2)]">
               {flameImage ? (
                 <Image
                   src={flameImage}
@@ -95,7 +59,7 @@ export default function ProductSection() {
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 40vw"
                   loading="lazy"
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="ease-editorial object-cover transition-transform duration-700 group-hover:scale-105"
                 />
               ) : (
                 <div className="text-on-surface-variant absolute inset-0 flex items-center justify-center text-sm">
@@ -110,35 +74,19 @@ export default function ProductSection() {
       {/* --- Regular Wallet --- */}
       <section className="bg-surface-container-low w-full py-32">
         <div className="mx-auto max-w-360 px-5 text-center md:px-16">
-          {/* ENTRY 1 */}
-          <div
-            ref={ref4}
-            className={`${baseTransition} delay-150 ${
-              vis4
-                ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
+          <Reveal index={0}>
             <span className="text-on-surface-variant mb-4 block text-[12px] font-semibold tracking-widest uppercase">
               02 / Classic
             </span>
-          </div>
+          </Reveal>
 
-          {/* ENTRY 2 */}
-          <div
-            ref={ref5}
-            className={`${baseTransition} delay-300 ${
-              vis5
-                ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                : "translate-y-10 opacity-0"
-            }`}
-          >
+          <Reveal index={1}>
             <h2 className="text-foreground mb-12 font-serif text-[32px] leading-[1.3]">
               The Regular Bifold
             </h2>
-          </div>
+          </Reveal>
 
-          <div className="group will-change-opacity bg-surface-container relative mx-auto aspect-video w-full max-w-5xl overflow-hidden border border-[rgba(138,121,104,0.2)] will-change-transform md:aspect-21/9">
+          <div className="group bg-surface-container relative mx-auto aspect-video w-full max-w-5xl overflow-hidden border border-[rgba(138,121,104,0.2)] md:aspect-21/9">
             {regularImage ? (
               <Image
                 src={regularImage}
@@ -146,7 +94,7 @@ export default function ProductSection() {
                 fill
                 sizes="(max-width: 768px) 100vw, 80vw"
                 loading="lazy"
-                className="bg-no-repeat object-cover transition-transform duration-1000 group-hover:scale-105"
+                className="ease-editorial bg-no-repeat object-cover transition-transform duration-700 group-hover:scale-105"
               />
             ) : (
               <div className="text-on-surface-variant absolute inset-0 flex items-center justify-center text-sm">
@@ -156,24 +104,16 @@ export default function ProductSection() {
           </div>
 
           <div className="mt-12">
-            {/* ENTRY 3 */}
-            <div
-              ref={ref6}
-              className={`${baseTransition} delay-500 ${
-                vis6
-                  ? "translate-y-0 opacity-100 motion-safe:opacity-100"
-                  : "translate-y-10 opacity-0"
-              }`}
-            >
+            <Reveal index={2}>
               <p className="text-on-surface-variant mx-auto mb-8 max-w-2xl text-[18px] leading-[1.6]">
                 Clean lines, no embellishment. A timeless bifold in full-grain
                 leather for those who prefer understated elegance.
               </p>
-            </div>
+            </Reveal>
 
             <AppLink
               href="/collection?category=regular-wallet"
-              className="border-foreground text-foreground hover:bg-foreground hover:text-background inline-flex items-center justify-center rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300"
+              className="border-foreground text-foreground hover:bg-foreground hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-10 py-4 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
             >
               View Classic
             </AppLink>

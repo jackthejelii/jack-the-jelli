@@ -60,9 +60,15 @@ export default function RelatedProducts({ products }: { products: Product[] }) {
                 key={product.id}
                 className="basis-[70%] pl-4 sm:basis-1/2 md:pl-8 lg:basis-1/3 xl:basis-1/4"
               >
+                {/* Mount-triggered for the same reason as the collection
+                    grid, and additionally because these sit in a carousel: a
+                    scroll observer would leave the off-screen slides hidden
+                    until they were scrolled into view. */}
                 <div
-                  className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-500"
-                  style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
+                  className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:ease-editorial motion-safe:duration-(--motion-reveal)"
+                  style={{
+                    animationDelay: `calc(${Math.min(i, 5)} * var(--motion-stagger))`,
+                  }}
                 >
                   <ProductCard product={product} variant="quiet" />
                 </div>

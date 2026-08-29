@@ -44,7 +44,7 @@ export default function ProductCard({
             // Always below the fold where this variant is used.
             loading="lazy"
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 70vw"
-            className="object-contain transition-transform duration-700 group-hover:scale-105"
+            className="ease-editorial object-contain transition-transform duration-700 group-hover:scale-105"
           />
         </div>
 
@@ -72,7 +72,7 @@ export default function ProductCard({
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-contain transition-transform duration-700 group-hover:scale-105"
+            className="ease-editorial object-contain transition-transform duration-700 group-hover:scale-105"
           />
         </div>
       </AppLink>
@@ -90,7 +90,7 @@ export default function ProductCard({
         <AddToCartButton product={product} />
         <AppLink
           href={href}
-          className="border-secondary text-foreground hover:bg-secondary hover:text-background inline-flex items-center justify-center rounded-none border bg-transparent px-3 py-3 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300"
+          className="border-secondary text-foreground hover:bg-secondary hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-3 py-3 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-(--motion-quick)"
         >
           View details
         </AppLink>

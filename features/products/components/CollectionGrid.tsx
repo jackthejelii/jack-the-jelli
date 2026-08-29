@@ -68,11 +68,19 @@ export default function CollectionGrid({
 
       {products.length > 0 ? (
         <div className="mt-12 grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Deliberately a mount animation rather than the scroll-driven
+              Reveal the homepage uses: this is the catalogue, and cards that
+              stayed invisible until an observer hydrated would be the wrong
+              trade on the page people come here to browse. Same tokens, so it
+              still reads as one system. The delay is capped so a long result
+              set never ends in a card waiting two seconds. */}
           {products.map((product, i) => (
             <div
               key={product.id}
-              className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:duration-500"
-              style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
+              className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:ease-editorial motion-safe:duration-(--motion-reveal)"
+              style={{
+                animationDelay: `calc(${Math.min(i, 5)} * var(--motion-stagger))`,
+              }}
             >
               <ProductCard product={product} priority={i < 3} />
             </div>

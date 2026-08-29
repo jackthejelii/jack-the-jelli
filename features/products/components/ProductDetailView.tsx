@@ -35,7 +35,7 @@ export default function ProductDetailView({
     <div className="mx-auto max-w-360 px-5 pt-32 pb-32 md:px-16 md:pt-40">
       <AppLink
         href="/collection"
-        className="text-on-surface-variant hover:text-foreground mb-8 inline-flex w-fit items-center gap-2 text-[12px] font-semibold tracking-[0.1em] uppercase transition-colors duration-300"
+        className="text-on-surface-variant hover:text-foreground ease-editorial mb-8 inline-flex w-fit items-center gap-2 text-[12px] font-semibold tracking-[0.1em] uppercase transition-colors duration-(--motion-quick)"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         The Collections

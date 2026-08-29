@@ -134,16 +134,6 @@ export const checkoutSchema = z.object({
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
-/**
- * The client-side half. `division` is submitted only to narrow the district
- * <select>; the stored division is derived from the district server-side, so
- * checkoutSchema ignores it entirely.
- */
-export const checkoutFieldsSchema = checkoutSchema.omit({
-  items: true,
-  idempotencyKey: true,
-});
-
 /** Shape the action feeds to zod — every value straight off the FormData. */
 export function readCheckoutFormData(formData: FormData) {
   const get = (key: string) => {

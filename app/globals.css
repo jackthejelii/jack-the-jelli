@@ -20,19 +20,6 @@
   --font-serif: var(--font-garamond, Georgia), "Times New Roman", serif;
   --font-heading: var(--font-garamond, Georgia), "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -57,15 +44,18 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Explicit custom tokens mapped for utilities (e.g., bg-tertiary) */
-  --color-tertiary: #f3f1ed;
-
   /* Material Design tokens — mapped so bg-/text-/border-* utilities work */
   --color-surface-container: var(--surface-container);
   --color-surface-container-low: var(--surface-container-low);
   --color-surface-container-highest: var(--surface-container-highest);
   --color-on-surface-variant: var(--on-surface-variant);
   --color-outline-variant: var(--outline-variant);
+
+  /* Motion easing, exposed through Tailwind's --ease-* namespace so it is
+     reachable as `ease-editorial` on any transition utility. Declared as a
+     reference to --motion-ease (see :root) rather than the literal curve, so
+     the CSS below and the utility class can never drift apart. */
+  --ease-editorial: var(--motion-ease);
 }
 
 :root {
@@ -103,24 +93,28 @@
   --on-surface-variant: #444748;
   --outline-variant: #c4c7c7;
 
-  /* Charts (Kept original) */
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-
   --radius: 0.625rem;
 
-  /* Sidebar mapped to palette */
-  --sidebar: #f9f8f6;
-  --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #1a1a1a;
-  --sidebar-primary-foreground: #f9f8f6;
-  --sidebar-accent: #f3f1ed;
-  --sidebar-accent-foreground: #1a1a1a;
-  --sidebar-border: #e8e5df;
-  --sidebar-ring: #8a7968;
+  /* Motion tokens — the site's whole animation vocabulary.
+     Two durations and one curve is deliberately the entire set: motion that
+     varies from component to component reads as noise rather than craft, and
+     the previous 1000ms-with-assorted-delays entrances read as a slow page,
+     not a considered one. Slow is not the same as luxurious.
+       --motion-quick    hover, colour and nudge feedback — felt, not watched
+       --motion-reveal   entrances — long enough to register as movement,
+                         short enough that nothing feels like it is loading
+       --motion-ease     fast departure, long settle. An element arrives
+                         decisively and comes to rest; a linear fade does not.
+       --motion-rise     how far a revealing element travels. Small on
+                         purpose: a long slide reads as a slideshow.
+       --motion-stagger  gap between siblings revealing in sequence. This is
+                         the part that reads as choreography — elements that
+                         animate in a relationship rather than independently. */
+  --motion-quick: 180ms;
+  --motion-reveal: 420ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-rise: 1rem;
+  --motion-stagger: 70ms;
 }
 
 .dark {
@@ -150,23 +144,6 @@
   --border: #333333;
   --input: #333333;
   --ring: #8a7968;
-
-  /* Charts (Kept original) */
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-
-  /* Sidebar dark mode mapped to palette */
-  --sidebar: #1a1a1a;
-  --sidebar-foreground: #f9f8f6;
-  --sidebar-primary: #8a7968;
-  --sidebar-primary-foreground: #f9f8f6;
-  --sidebar-accent: #2a2a2a;
-  --sidebar-accent-foreground: #f9f8f6;
-  --sidebar-border: #333333;
-  --sidebar-ring: #8a7968;
 }
 
 @layer base {
@@ -231,6 +208,57 @@
   animation: page-fade-in 220ms ease-out both;
 }
 
+/* Scroll reveal — components/layout/Reveal.tsx.
+   The hidden state lives here rather than in the component so an element is
+   never painted at full opacity for a frame before the observer runs.
+   `data-revealed` is set once and never unset: content that re-hides on its
+   way out of the viewport reads as a glitch when a shopper scrolls back up.
+   --reveal-delay is set per element by the component to stagger a group. */
+@utility reveal {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-rise), 0);
+  transition:
+    opacity var(--motion-reveal) var(--motion-ease) var(--reveal-delay, 0ms),
+    transform var(--motion-reveal) var(--motion-ease) var(--reveal-delay, 0ms);
+}
+
+/* Unlayered on purpose: this has to beat the utility above regardless of the
+   order Tailwind emits them in. */
+.reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Without scripting the observer never runs, and an entrance animation is not
+   worth hiding the catalogue over. */
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Cart count acknowledgement — features/cart/components/CartButton.tsx.
+   Adding to the cart is confirmed by a toast, which appears in the corner and
+   leaves; nothing on the cart itself moved, so the number quietly changing was
+   easy to miss entirely. A single scale beat is enough to draw the eye to the
+   badge without turning it into an attention-seeking element. */
+@keyframes cart-tick {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@utility cart-tick {
+  animation: cart-tick 320ms var(--motion-ease) both;
+}
+
 /* Skeleton is a shared primitive (components/ui/skeleton.tsx) whose
    animate-pulse doesn't respect prefers-reduced-motion on its own, and it's
    used in places a motion-safe: variant at the call site can't reach. */
@@ -249,6 +277,18 @@
   }
 
   .page-fade {
+    animation: none;
+  }
+
+  /* Reveals arrive instantly rather than not at all — the entrance is
+     decoration, the content is not. */
+  .reveal {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .cart-tick {
     animation: none;
   }
 }

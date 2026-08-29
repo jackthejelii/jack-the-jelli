@@ -36,10 +36,6 @@ export function normalizeBdPhone(input: string): string | null {
   return CANONICAL_PATTERN.test(local) ? local : null;
 }
 
-export function isValidBdPhone(input: string): boolean {
-  return normalizeBdPhone(input) !== null;
-}
-
 /** `01712-345678` — display only. Never stored, never queried. */
 export function formatBdPhone(canonical: string): string {
   if (!CANONICAL_PATTERN.test(canonical)) return canonical;
