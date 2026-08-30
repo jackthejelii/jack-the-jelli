@@ -20,6 +20,13 @@ export default function ProductCard({
   const href = `/collection/${product.slug}`;
 
   /*
+   * data-product-frame marks the image box. It is a styling hook, like
+   * data-product-root below it: the homepage featured strip wipes the
+   * photograph in behind a clip-path and retimes the hover zoom, and both need
+   * to address the frame from outside without this component knowing where it
+   * is being used. On both variants deliberately — a hook that exists on only
+   * one of two identical boxes is a trap for whoever reaches for it next.
+   *
    * Both variants frame the image the same way: a square box, object-contain.
    * Square because a wallet is a landscape-shaped object -- the old aspect-4/5
    * was an apparel proportion that spent most of the card on empty space.
@@ -36,7 +43,10 @@ export default function ProductCard({
         href={href}
         className="focus-visible:outline-foreground group block focus-visible:outline-2 focus-visible:outline-offset-4"
       >
-        <div className="bg-surface-container relative aspect-square overflow-hidden">
+        <div
+          data-product-frame=""
+          className="bg-surface-container relative aspect-square overflow-hidden"
+        >
           <Image
             src={product.thumbnail || "/image-placeholder.jpg"}
             alt={product.name}
@@ -65,7 +75,10 @@ export default function ProductCard({
     // image to fly to the cart — see features/cart/lib/fly-to-cart.ts.
     <div className="group" data-product-root="">
       <AppLink href={href} tabIndex={-1} aria-hidden="true">
-        <div className="bg-surface-container relative aspect-square overflow-hidden">
+        <div
+          data-product-frame=""
+          className="bg-surface-container relative aspect-square overflow-hidden"
+        >
           <Image
             src={product.thumbnail || "/image-placeholder.jpg"}
             alt={product.name}

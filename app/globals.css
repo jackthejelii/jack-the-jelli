@@ -115,6 +115,11 @@
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-rise: 1rem;
   --motion-stagger: 70ms;
+  /* Entrances for elements large enough that --motion-reveal reads as a snap:
+     display type rising out of a mask, a photograph being wiped in. Same
+     reasoning as the hero's 1400ms — the bigger the moving area, the longer it
+     needs to feel deliberate rather than abrupt. Used by the featured strip. */
+  --motion-reveal-lg: 700ms;
 }
 
 .dark {
@@ -258,6 +263,145 @@
     opacity: 1;
     transform: none;
   }
+
+  .featured-mask > *,
+  .featured-drift[data-reveal-item] {
+    transform: none;
+  }
+
+  .featured-rule {
+    transform: scaleX(1);
+  }
+
+  .featured-frame [data-product-frame] {
+    clip-path: none;
+  }
+}
+
+/* Featured strip — features/homepage/components/FeaturedStrip.tsx.
+   The one place on the site that gets a richer entrance than the shared rise
+   and fade. It is a marketing surface seen once per visit, which is where a
+   delight budget belongs; the catalogue and the checkout are not.
+
+   Everything here hangs off the group's single [data-revealed] rather than
+   observing individually, for the same reason the strip uses <Reveal group> at
+   all — slides parked past the right edge never intersect the viewport.
+
+   The direction is the point. The cards drift in from the right, along the
+   axis they scroll on and in the same direction the auto-scroll then carries
+   them, so the entrance and the idle drift read as one continuous movement
+   instead of two unrelated effects. */
+.featured-strip {
+  /* Wider than the site default. The cards travel further and laterally, and
+     at 70ms that overlap reads as one blurred mass rather than a sequence. */
+  --motion-stagger: 90ms;
+  /* How far a card travels along the carousel axis. */
+  --motion-drift: 3rem;
+}
+
+/* Display type rises out from behind its own edge. No opacity: the clipped
+   edge is what makes it read as type being set rather than a div fading in,
+   and fading it as well just softens the effect it exists for. */
+.featured-mask {
+  display: block;
+  overflow: hidden;
+  /* Room for descenders inside the clip, taken straight back out of the
+     layout so the mask cannot change the heading's spacing. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.featured-mask > * {
+  display: block;
+  transform: translate3d(0, 110%, 0);
+  transition: transform var(--motion-reveal-lg) var(--motion-ease)
+    var(--reveal-delay, 0ms);
+}
+
+.reveal-group[data-revealed="true"] .featured-mask > * {
+  transform: none;
+}
+
+/* The hairline beside the eyebrow, drawn left to right. */
+.featured-rule {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-reveal) var(--motion-ease)
+    var(--reveal-delay, 0ms);
+}
+
+.reveal-group[data-revealed="true"] .featured-rule {
+  transform: scaleX(1);
+}
+
+/* Overrides the vertical rise in [data-reveal-item] for the cards only. The
+   revealed rule that follows it is one specificity point higher, so the rest
+   position still wins without !important. */
+.featured-drift[data-reveal-item] {
+  transform: translate3d(var(--motion-drift), 0.5rem, 0) scale(0.97);
+}
+
+/* The photograph is wiped upward inside its frame while the card itself is
+   still arriving — the lookbook reveal, and the reason this section looks
+   more considered than a row of fading tiles.
+
+   clip-path rather than a sliding cover panel: one property, no extra node,
+   and it leaves ProductCard's own hover transition on the <img> untouched.
+   The offset delay puts the wipe just behind its card rather than on top of
+   it, so the two read as cause and effect. */
+.featured-frame [data-product-frame] {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path var(--motion-reveal-lg) var(--motion-ease)
+    calc(var(--reveal-delay, 0ms) + 120ms);
+}
+
+.reveal-group[data-revealed="true"] .featured-frame [data-product-frame] {
+  clip-path: inset(0 0 0 0);
+}
+
+/* Hover. Separate element from the reveal item on purpose: the item is still
+   carrying a 420ms entrance transition on transform, and a lift borrowing
+   that duration would feel like the card was wading. */
+.featured-lift {
+  transition: transform var(--motion-quick) var(--motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .featured-lift:hover {
+    transform: translate3d(0, -4px, 0);
+  }
+
+  /* ProductCard's shared 700ms zoom is a considered pace for a grid you are
+     browsing and far too slow for a card you are pointing at — at that length
+     the image is still moving after the eye has settled. Scoped here rather
+     than changed at the source, which would also retime the collection grid
+     and the related-products row. */
+  .featured-lift [data-product-frame] img {
+    transition-duration: 320ms;
+  }
+
+  .featured-lift:hover h3::after {
+    transform: scaleX(1);
+  }
+}
+
+/* The name earns an underline on hover, so the whole tile reads as one link
+   rather than a picture that happens to be clickable. */
+.featured-lift h3 {
+  position: relative;
+  display: inline-block;
+}
+
+.featured-lift h3::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.1em;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-quick) var(--motion-ease);
 }
 
 /* Hero arrival — features/homepage/components/HeroSection.tsx.
@@ -346,6 +490,32 @@
     transition: none;
     opacity: 1;
     transform: none;
+  }
+
+  /* Same for the featured strip's richer entrance: the heading, the rule and
+     the photographs are all present at rest, they just stop travelling to get
+     there. The auto-scroll is disabled in the component rather than here —
+     the plugin moves the carousel through its own API, and no CSS rule can
+     reach that. */
+  .featured-mask > *,
+  .featured-drift[data-reveal-item],
+  .featured-lift {
+    transition: none;
+    transform: none;
+  }
+
+  .featured-rule {
+    transition: none;
+    transform: scaleX(1);
+  }
+
+  .featured-frame [data-product-frame] {
+    transition: none;
+    clip-path: none;
+  }
+
+  .featured-lift h3::after {
+    transition: none;
   }
 
   .cart-tick {

@@ -38,7 +38,7 @@ Shopify/WooCommerce, no CMS.
 | Styling      | **Tailwind CSS v4** (CSS-only config), **shadcn/ui** (`radix-nova`, Radix, Lucide) |
 | Client state | **Zustand** (cart, persisted to `localStorage`)                                    |
 | Validation   | **Zod 4** — one schema shared by client and server                                 |
-| Misc         | `sonner` (toasts), `embla-carousel-react` (galleries), `next-themes`               |
+| Misc         | `sonner` (toasts), `embla-carousel-react` + `-auto-scroll` (galleries), `next-themes`               |
 
 > ### ⚠️ This is not the Next.js you remember
 >
@@ -145,7 +145,10 @@ featured · thumbnail · images[{url, publicId}] · comparePrice · tags`
   (`setProductFeatured`, which writes that key alone rather than re-validating
   the whole product). Read by `getFeaturedProducts`. Absent on documents
   written before the field existed, which reads as `false` to the query, so
-  there is nothing to backfill.
+  there is nothing to backfill. From `FEATURED_DRIFT_MIN` (6) pieces up the
+  strip loops and drifts on its own, pausing under the cursor or on focus;
+  below that it is arrows and drag only, because embla cannot loop a row it
+  can't fill.
 - `comparePrice` and `tags` are schema-only: no form control yet, kept so adding
   one needs no migration.
 

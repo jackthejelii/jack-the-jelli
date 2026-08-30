@@ -18,6 +18,21 @@ export const DEFAULT_SORT: SortOption = "newest";
  */
 export const FEATURED_LIMIT = 8;
 
+/**
+ * Featured pieces needed before the strip loops and drifts on its own.
+ *
+ * embla's `loop` needs enough slides to fill the viewport *and* the clones it
+ * positions on either side; below that it disables looping itself and logs a
+ * warning. The widest breakpoint shows four cards, so six is the point where
+ * the loop has something to work with and the drift stops looking like a row
+ * of three sliding back and forth.
+ *
+ * Under it the strip stays exactly as it is now — arrows and drag, no
+ * movement. That means an admin never has to know this number exists; they
+ * flag pieces, and the strip starts moving once there are enough of them.
+ */
+export const FEATURED_DRIFT_MIN = 6;
+
 /** Rows the predictive search panel shows before deferring to "See all N". */
 export const SUGGESTION_LIMIT = 6;
 
