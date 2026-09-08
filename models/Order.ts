@@ -21,7 +21,20 @@ import {
  */
 export interface IOrderItem {
   product: mongoose.Types.ObjectId;
+  /**
+   * Which colourway of that product. Unlike `product` this is not provenance
+   * only — it is the address the stock restore on cancel/return decrements
+   * back into, so an order line without it cannot be un-sold.
+   */
+  variantId: mongoose.Types.ObjectId;
   name: string;
+  /**
+   * The colour as it was named at purchase, e.g. "Black". Snapshotted like
+   * every other display field: renaming a colourway must not rewrite what a
+   * past receipt or packing list says was shipped.
+   */
+  color: string;
+  /** The *variant's* SKU — what is actually picked off the shelf. */
   sku: string;
   slug: string;
   /** Unit price in whole taka, as charged. */
@@ -117,7 +130,9 @@ export interface IOrder {
 const orderItemSchema = new Schema<IOrderItem>(
   {
     product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    variantId: { type: Schema.Types.ObjectId, required: true },
     name: { type: String, required: true },
+    color: { type: String, required: true },
     sku: { type: String, required: true },
     slug: { type: String, required: true },
     // BDT, whole taka — matches models/Product.ts.

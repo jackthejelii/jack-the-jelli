@@ -7,7 +7,7 @@ import { connectDB } from "@/lib/db";
 import { Cart } from "@/models";
 import { MAX_CART_LINES } from "@/features/cart/lib/limits";
 import { orderLineSchema } from "@/features/checkout/lib/checkout-schema";
-import type { CartLineInput } from "@/features/cart/lib/types";
+import { lineKey, type CartLineInput } from "@/features/cart/lib/types";
 
 /**
  * The saved cart, read and written for signed-in shoppers only.
@@ -30,24 +30,34 @@ const cartLinesSchema = z
   .array(orderLineSchema)
   .max(MAX_CART_LINES)
   .transform((lines) => {
-    const byId = new Map(lines.map((line) => [line.productId, line]));
-    return [...byId.values()].filter((line) =>
-      Types.ObjectId.isValid(line.productId),
+    // Keyed by the (product, colour) pair — deduping on the product alone
+    // would throw away the second colourway of the same piece.
+    const byKey = new Map(lines.map((line) => [lineKey(line), line]));
+    return [...byKey.values()].filter(
+      (line) =>
+        Types.ObjectId.isValid(line.productId) &&
+        Types.ObjectId.isValid(line.variantId),
     );
   });
 
 function toDocuments(lines: z.infer<typeof cartLinesSchema>) {
   return lines.map((line) => ({
     productId: new Types.ObjectId(line.productId),
+    variantId: new Types.ObjectId(line.variantId),
     qty: line.qty,
   }));
 }
 
 function toLines(
-  items: { productId: Types.ObjectId; qty: number }[],
+  items: {
+    productId: Types.ObjectId;
+    variantId: Types.ObjectId;
+    qty: number;
+  }[],
 ): CartLineInput[] {
   return items.map((item) => ({
     productId: String(item.productId),
+    variantId: String(item.variantId),
     qty: item.qty,
   }));
 }
@@ -98,7 +108,11 @@ export async function syncCartOnSignIn(
   }
 
   const saved = await Cart.findOne({ userId }).lean<{
-    items: { productId: Types.ObjectId; qty: number }[];
+    items: {
+      productId: Types.ObjectId;
+      variantId: Types.ObjectId;
+      qty: number;
+    }[];
   } | null>();
 
   return saved ? toLines(saved.items) : [];

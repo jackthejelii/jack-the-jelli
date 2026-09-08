@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_CART_LINES, MAX_LINE_QTY } from "@/features/cart/lib/limits";
+import { lineKey } from "@/features/cart/lib/types";
 import { isKnownDistrict } from "@/features/checkout/lib/delivery";
 import { normalizeBdPhone } from "@/features/orders/lib/phone";
 
@@ -28,9 +29,13 @@ export const CHECKOUT_VALUE_FIELDS = [
  * The cart as far as the server is concerned: ids and quantities, nothing
  * else. Names, prices and the delivery fee are never read from the client —
  * they're recomputed from the database in placeOrder.
+ *
+ * `variantId` is as required as `productId`: stock and SKU live on the
+ * colourway, so a line without one names nothing the warehouse could pick.
  */
 export const orderLineSchema = z.object({
   productId: z.string().regex(OBJECT_ID_PATTERN, "Unknown product"),
+  variantId: z.string().regex(OBJECT_ID_PATTERN, "Unknown colour"),
   qty: z
     .number()
     .int("Quantity must be a whole number")
@@ -59,8 +64,9 @@ const itemsField = z.preprocess(
     .min(1, "Your cart is empty")
     .max(MAX_CART_LINES, "That's too many pieces for one order")
     .refine(
-      (lines) =>
-        new Set(lines.map((line) => line.productId)).size === lines.length,
+      // By the composite key, not the product: the same wallet in black and in
+      // tan is two legitimate lines, and collapsing them would be the bug.
+      (lines) => new Set(lines.map(lineKey)).size === lines.length,
       "The same piece appears twice in your cart",
     ),
 );

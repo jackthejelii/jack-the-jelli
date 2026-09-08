@@ -1,3 +1,17 @@
+/**
+ * One colourway as a card needs it. Deliberately without the image *list* —
+ * a tile shows one photograph per colour, so shipping the whole gallery for
+ * every colour of every product on the page would be paying for nothing.
+ */
+export interface ProductVariant {
+  id: string;
+  color: string;
+  hex: string;
+  stock: number;
+  /** The colourway's first image — what the tile shows when it is selected. */
+  thumbnail?: string;
+}
+
 /** The grid/card payload. Kept to exactly what a card renders — every extra
  *  field here is shipped to the browser for every product on the page. */
 export interface Product {
@@ -5,16 +19,19 @@ export interface Product {
   slug: string;
   name: string;
   price: number;
-  thumbnail?: string;
   category: string;
-  /** Earns its place: the card's add-to-cart button needs it to seed the line. */
-  stock: number;
+  /**
+   * Never empty. Earns its place twice over: the swatch row renders from it,
+   * and the card's add-to-cart needs a colourway's id and stock to seed a line
+   * — a product id alone no longer names anything buyable.
+   */
+  variants: ProductVariant[];
 }
 
 /**
  * One row in the predictive search panel. Deliberately not `Product`: a
  * suggestion row draws a thumb, a name and a price and nothing else, so it
- * carries neither `id`, `stock` nor `category`.
+ * carries neither `id`, `variants` nor `category`.
  */
 export interface ProductSuggestion {
   slug: string;
@@ -48,6 +65,19 @@ export interface ProductImage {
 }
 
 /**
+ * A colourway on the detail page — the full thing, gallery and SKU included,
+ * since picking a swatch has to swap all of it.
+ */
+export interface ProductDetailVariant {
+  id: string;
+  color: string;
+  hex: string;
+  sku: string;
+  stock: number;
+  images: ProductImage[];
+}
+
+/**
  * The richer shape the product detail page needs. Kept separate from Product so
  * the collection grid keeps shipping the smaller payload.
  */
@@ -55,11 +85,9 @@ export interface ProductDetail {
   id: string;
   slug: string;
   name: string;
-  sku: string;
   category: string;
   price: number;
   description?: string;
-  stock: number;
-  thumbnail?: string;
-  images: ProductImage[];
+  /** Never empty. The first entry is the colour the page opens on. */
+  variants: ProductDetailVariant[];
 }

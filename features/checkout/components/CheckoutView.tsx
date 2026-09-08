@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCartRevalidation } from "@/features/cart/hooks/useCartRevalidation";
 import { useCartHydrated, useCartStore } from "@/features/cart/lib/cartStore";
-import type { UnavailableLine } from "@/features/cart/lib/types";
+import { lineKey, type UnavailableLine } from "@/features/cart/lib/types";
 import CheckoutSummary from "@/features/checkout/components/CheckoutSummary";
 import DistrictFields from "@/features/checkout/components/DistrictFields";
 import {
@@ -67,7 +67,9 @@ export default function CheckoutView({
     .filter((line) => line.qty <= 0)
     .map((line) => ({
       productId: line.productId,
+      variantId: line.variantId,
       name: line.name,
+      color: line.color,
       available: 0,
       requested: 1,
       reason: "sold-out" as const,
@@ -79,9 +81,11 @@ export default function CheckoutView({
   // "Reduce to 2" for a line already sitting at 2, and keeps saying "you asked
   // for 5" after they've complied. A line no longer in the cart has no quantity
   // to compare, which is what drops it.
-  const currentQty = new Map(lines.map((line) => [line.productId, line.qty]));
+  // Keyed by the (product, colour) pair: matching on the product alone would
+  // let a corrected black wallet clear the alert still owed for the tan one.
+  const currentQty = new Map(lines.map((line) => [lineKey(line), line.qty]));
   const reported = (state.unavailable ?? []).filter((line) => {
-    const qty = currentQty.get(line.productId);
+    const qty = currentQty.get(lineKey(line));
     return qty !== undefined && qty > line.available;
   });
 
@@ -113,13 +117,14 @@ export default function CheckoutView({
       action={formAction}
       className="mx-auto max-w-360 px-5 pt-32 pb-32 md:px-16 md:pt-40"
     >
-      {/* The cart, reduced to the only two things the server reads. */}
+      {/* The cart, reduced to the only three things the server reads. */}
       <input
         type="hidden"
         name="items"
         value={JSON.stringify(
           sellable.map((line) => ({
             productId: line.productId,
+            variantId: line.variantId,
             qty: line.qty,
           })),
         )}

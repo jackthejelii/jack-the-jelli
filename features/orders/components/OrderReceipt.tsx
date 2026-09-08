@@ -37,6 +37,11 @@ export default function OrderReceipt({ order }: { order: OrderDTO }) {
               <p className="text-foreground mt-1 font-serif text-[17px] leading-snug">
                 {item.name}
               </p>
+              {item.color && (
+                <p className="text-on-surface-variant mt-0.5 text-[13px]">
+                  {item.color}
+                </p>
+              )}
               <p className="text-on-surface-variant mt-0.5 text-[13px]">
                 {formatPrice(item.price)} × {item.qty}
               </p>

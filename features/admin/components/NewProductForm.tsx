@@ -12,9 +12,9 @@ import { useProductSubmit } from "@/features/admin/hooks/useProductSubmit";
 import CategorySelect from "@/features/admin/components/CategorySelect";
 import FeaturedToggle from "@/features/admin/components/FeaturedToggle";
 import ProductFormSection from "@/features/admin/components/ProductFormSection";
-import ProductMediaUploader, {
-  type ProductMediaUploaderHandle,
-} from "@/features/admin/components/ProductMediaUploader";
+import VariantEditor, {
+  type VariantEditorHandle,
+} from "@/features/admin/components/VariantEditor";
 import type { CategoryOption } from "@/features/admin/lib/category-schema";
 import { emptyFormState } from "@/features/admin/lib/form-state";
 import { createProduct } from "@/features/admin/lib/product-actions";
@@ -35,15 +35,15 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
     createProduct,
     emptyFormState,
   );
-  const [mediaKey, setMediaKey] = useState(0);
+  const [variantsKey, setVariantsKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
-  const uploaderRef = useRef<ProductMediaUploaderHandle>(null);
+  const variantsRef = useRef<VariantEditorHandle>(null);
   const { markDirty, clearDirty } = useDirtyGuard();
 
   // A successful create redirects server-side, so the beforeunload guard has to
   // stand down as the submit starts. Any later edit re-marks it via onChange.
   const { handleSubmit, isUploading, errors } = useProductSubmit({
-    uploaderRef,
+    variantsRef,
     formAction,
     state,
     schema: createProductSchema,
@@ -54,8 +54,10 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
 
   const handleDiscard = useCallback(() => {
     formRef.current?.reset();
-    // Remount the uploader to drop every staged preview.
-    setMediaKey((key) => key + 1);
+    // Remount the colour editor: form.reset() restores the *inputs* it owns,
+    // but the colour rows and their staged previews are React state, which a
+    // native reset cannot reach.
+    setVariantsKey((key) => key + 1);
     clearDirty();
   }, [clearDirty]);
 
@@ -153,21 +155,6 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
             </Field>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <Field data-invalid={Boolean(errors?.sku) || undefined}>
-                <FieldLabel htmlFor="sku" className={fieldLabelClassName}>
-                  SKU
-                </FieldLabel>
-                <Input
-                  id="sku"
-                  name="sku"
-                  maxLength={16}
-                  defaultValue={state.values?.sku}
-                  aria-invalid={Boolean(errors?.sku)}
-                  placeholder="JTJ-LHT-001"
-                  className={boxedInputClassName}
-                />
-                <FieldError>{errors?.sku}</FieldError>
-              </Field>
               <CategorySelect
                 categories={categories}
                 defaultValue={state.values?.category}
@@ -175,71 +162,47 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
                 triggerClassName={boxedInputClassName}
                 onDirty={markDirty}
               />
+              <Field data-invalid={Boolean(errors?.price) || undefined}>
+                <FieldLabel htmlFor="price" className={fieldLabelClassName}>
+                  Price (BDT)
+                </FieldLabel>
+                <div className="relative flex items-center">
+                  <span className="text-muted-foreground pointer-events-none absolute left-5 text-base">
+                    ৳
+                  </span>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="^\d+(\.\d{1,2})?$"
+                    defaultValue={state.values?.price}
+                    aria-invalid={Boolean(errors?.price)}
+                    placeholder="0.00"
+                    className={`${boxedInputClassName} pl-10`}
+                  />
+                </div>
+                <FieldError>{errors?.price}</FieldError>
+              </Field>
             </div>
-
-            <Field
-              className="md:w-1/2 md:pr-4"
-              data-invalid={Boolean(errors?.price) || undefined}
-            >
-              <FieldLabel htmlFor="price" className={fieldLabelClassName}>
-                Price (BDT)
-              </FieldLabel>
-              <div className="relative flex items-center">
-                <span className="text-muted-foreground pointer-events-none absolute left-5 text-base">
-                  ৳
-                </span>
-                <Input
-                  id="price"
-                  name="price"
-                  type="text"
-                  inputMode="decimal"
-                  pattern="^\d+(\.\d{1,2})?$"
-                  defaultValue={state.values?.price}
-                  aria-invalid={Boolean(errors?.price)}
-                  placeholder="0.00"
-                  className={`${boxedInputClassName} pl-10`}
-                />
-              </div>
-              <FieldError>{errors?.price}</FieldError>
-            </Field>
           </div>
         </ProductFormSection>
 
+        {/* One section, not three. SKU, stock and photographs all belong to a
+            colourway rather than to the product, so splitting them back apart
+            into "Media" and "Inventory" would ask the admin to fill in the same
+            colour in two places. */}
         <ProductFormSection
-          title="Product Media"
-          description="High-fidelity imagery capturing the texture and craftsmanship of the item."
+          title="Colours & Inventory"
+          description="Every colourway this piece comes in — each with its own SKU, stock count and photographs. A single-colour piece is simply one entry."
         >
-          <ProductMediaUploader
-            key={mediaKey}
-            ref={uploaderRef}
-            onChange={markDirty}
+          <VariantEditor
+            key={variantsKey}
+            ref={variantsRef}
+            echoedValue={state.values?.variants}
+            error={errors?.variants}
+            onDirty={markDirty}
           />
-          <FieldError>{errors?.images}</FieldError>
-        </ProductFormSection>
-
-        <ProductFormSection
-          title="Inventory Logic"
-          description="Stock management and scarcity controls for luxury distribution."
-        >
-          <Field
-            className="md:w-1/2 md:pr-4"
-            data-invalid={Boolean(errors?.stock) || undefined}
-          >
-            <FieldLabel htmlFor="stock" className={fieldLabelClassName}>
-              Current Stock
-            </FieldLabel>
-            <Input
-              id="stock"
-              name="stock"
-              type="number"
-              min={0}
-              defaultValue={state.values?.stock}
-              aria-invalid={Boolean(errors?.stock)}
-              placeholder="25"
-              className={boxedInputClassName}
-            />
-            <FieldError>{errors?.stock}</FieldError>
-          </Field>
         </ProductFormSection>
 
         <ProductFormSection

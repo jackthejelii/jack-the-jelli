@@ -25,35 +25,57 @@ function toProductDTO(product: LeanProduct): ProductDTO {
     id: String(product._id),
     name: product.name,
     slug: product.slug,
-    sku: product.sku,
     categoryId: product.category ? String(product.category._id) : "",
     // A category deleted out from under a product shouldn't crash the table.
     categoryName: product.category?.name ?? "Uncategorised",
     price: product.price,
     description: product.description,
-    stock: product.stock,
     status: product.status,
     // Coerced: documents written before the field existed have no value.
     featured: Boolean(product.featured),
-    thumbnail: product.thumbnail,
-    images: (product.images ?? []).map((image) => ({
-      url: image.url,
-      publicId: image.publicId,
+    variants: (product.variants ?? []).map((variant) => ({
+      id: String(variant._id),
+      color: variant.color,
+      hex: variant.hex,
+      sku: variant.sku,
+      stock: variant.stock,
+      images: (variant.images ?? []).map((image) => ({
+        url: image.url,
+        publicId: image.publicId,
+      })),
     })),
     createdAt: product.createdAt?.toISOString() ?? "",
     updatedAt: product.updatedAt?.toISOString() ?? "",
   };
 }
 
-/** Mirror of getStockStatus (D3b) expressed as a Mongo query. */
+/**
+ * Mirror of getStockStatus (D3b) expressed as a Mongo query — against the sum
+ * across every colourway, which is what `totalStock` means on the storefront
+ * side. A piece is out of stock only when *no* colour is left.
+ *
+ * `$expr` rather than a field predicate because that sum exists nowhere on the
+ * document, and it cannot use an index. That is affordable here and only here:
+ * this is the admin table, filtered by hand over a catalogue of tens. Nothing
+ * on the storefront's hot path filters by stock.
+ */
+const variantStockSum = { $sum: "$variants.stock" };
+
 function stockFilter(stock: StockStatus): QueryFilter<IProduct> {
   switch (stock) {
     case "out-of-stock":
-      return { stock: { $lte: 0 } };
+      return { $expr: { $lte: [variantStockSum, 0] } };
     case "low-stock":
-      return { stock: { $gt: 0, $lte: LOW_STOCK_THRESHOLD } };
+      return {
+        $expr: {
+          $and: [
+            { $gt: [variantStockSum, 0] },
+            { $lte: [variantStockSum, LOW_STOCK_THRESHOLD] },
+          ],
+        },
+      };
     case "in-stock":
-      return { stock: { $gt: LOW_STOCK_THRESHOLD } };
+      return { $expr: { $gt: [variantStockSum, LOW_STOCK_THRESHOLD] } };
   }
 }
 
@@ -85,7 +107,9 @@ export async function getProducts({
   if (search) {
     // Escaped so a stray "(" in the search box can't throw a regex error.
     const pattern = new RegExp(escapeRegex(search), "i");
-    filter.$or = [{ name: pattern }, { sku: pattern }];
+    // SKUs moved onto the colourway, so the search reaches into the array —
+    // typing a black bifold's SKU still finds the product it belongs to.
+    filter.$or = [{ name: pattern }, { "variants.sku": pattern }];
   }
   if (stock) Object.assign(filter, stockFilter(stock));
   // Archived products are hidden from the default (unfiltered) list — that's

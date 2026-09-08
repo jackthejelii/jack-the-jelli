@@ -21,12 +21,17 @@ export function useCartRevalidation(active: boolean): void {
   useEffect(() => {
     if (!active) return;
 
-    const ids = useCartStore.getState().items.map((line) => line.productId);
-    if (ids.length === 0) return;
+    // Pairs, not bare ids: stock lives on the colourway now, so the product
+    // alone can't answer "how many are left".
+    const lines = useCartStore.getState().items.map((line) => ({
+      productId: line.productId,
+      variantId: line.variantId,
+    }));
+    if (lines.length === 0) return;
 
     let cancelled = false;
 
-    revalidateCart(ids)
+    revalidateCart(lines)
       .then((snapshots) => {
         if (!cancelled) useCartStore.getState().reconcile(snapshots);
       })

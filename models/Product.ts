@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { HEX_COLOR_PATTERN } from "@/lib/color";
 import { escapeRegex, slugify } from "@/lib/slug";
 
 export const PRODUCT_STATUSES = ["Draft", "Published", "Archived"] as const;
@@ -9,14 +10,39 @@ export interface IProductImage {
   publicId: string;
 }
 
+/**
+ * One colourway of a product — the thing a shopper actually buys.
+ *
+ * `sku`, `stock` and `images` live here rather than on the product because all
+ * three genuinely differ per colour: the black bifold and the tan bifold are
+ * counted, photographed and picked from the shelf separately. What does *not*
+ * differ — name, price, description, category — deliberately stays on the
+ * parent, so repricing a piece can never leave two colours disagreeing.
+ *
+ * `variants` is required with at least one entry, so a single-colour product is
+ * just a one-variant product. That is the whole point: no call site anywhere
+ * has to branch on "does this product have variants?", because every one does.
+ *
+ * These keep their `_id` (unlike IProductImage, which is `{ _id: false }`) —
+ * it is the id a cart line, an order line and the stock decrement all address.
+ */
+export interface IProductVariant {
+  _id: mongoose.Types.ObjectId;
+  /** Display name of the colourway, e.g. "Black". Unique within the product. */
+  color: string;
+  /** The swatch fill. Not checked against the photo — it is a label, not the product. */
+  hex: string;
+  sku: string;
+  stock: number;
+  images: IProductImage[];
+}
+
 export interface IProduct {
   name: string;
   slug: string;
-  sku: string;
   category: mongoose.Types.ObjectId;
   price: number;
   description?: string;
-  stock: number;
   status: ProductStatus;
   /**
    * Admin-set flag for the homepage featured strip. A dedicated boolean rather
@@ -25,8 +51,8 @@ export interface IProduct {
    * text field.
    */
   featured: boolean;
-  thumbnail?: string;
-  images: IProductImage[];
+  /** Never empty — see IProductVariant. The first entry is the default colour. */
+  variants: IProductVariant[];
   /** Schema-only (D3a): no form control yet, kept so adding one needs no migration. */
   comparePrice?: number;
   /** Schema-only (D3a): see comparePrice. */
@@ -43,17 +69,28 @@ const productImageSchema = new Schema<IProductImage>(
   { _id: false },
 );
 
+const productVariantSchema = new Schema<IProductVariant>({
+  color: { type: String, required: true, trim: true, maxlength: 40 },
+  hex: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true,
+    match: [
+      HEX_COLOR_PATTERN,
+      "Swatch colour must be a hex value like #1c1b1a",
+    ],
+  },
+  sku: { type: String, required: true, uppercase: true, trim: true },
+  stock: { type: Number, required: true, min: 0, default: 0 },
+  // Objects rather than bare URLs: publicId is what makes deletion possible.
+  images: { type: [productImageSchema], default: [] },
+});
+
 const productSchema = new Schema<IProduct>(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true },
-    sku: {
-      type: String,
-      required: true,
-      unique: true,
-      uppercase: true,
-      trim: true,
-    },
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",
@@ -63,7 +100,6 @@ const productSchema = new Schema<IProduct>(
     // BDT, stored as whole taka — not paisa.
     price: { type: Number, required: true, min: 0 },
     description: { type: String, trim: true },
-    stock: { type: Number, required: true, min: 0, default: 0 },
     status: {
       type: String,
       enum: PRODUCT_STATUSES,
@@ -73,10 +109,17 @@ const productSchema = new Schema<IProduct>(
     // Absent on every document written before this field existed, which reads
     // as false to a `featured: true` query — so no backfill is needed.
     featured: { type: Boolean, default: false },
-    // Cloudinary secure_url of the primary image.
-    thumbnail: { type: String },
-    // Objects rather than bare URLs: publicId is what makes deletion possible.
-    images: { type: [productImageSchema], default: [] },
+    variants: {
+      type: [productVariantSchema],
+      // `default: undefined` rather than the implicit `[]`, so an omitted
+      // variants array fails `required` instead of saving an empty product.
+      default: undefined,
+      required: true,
+      validate: {
+        validator: (variants: IProductVariant[]) => variants.length > 0,
+        message: "A product needs at least one colour",
+      },
+    },
     comparePrice: { type: Number, min: 0 },
     tags: { type: [String], default: [] },
   },
@@ -95,6 +138,20 @@ productSchema.index({ status: 1, featured: 1, createdAt: -1 }); // homepage stri
 // only lets Mongo scan the index instead of the collection. A modest win, and
 // the honest fix if search ever gets slow is a text index or Atlas Search.
 productSchema.index({ status: 1, name: 1 });
+
+// A SKU identifies one colourway of one product, so uniqueness moved down here
+// with the field. This is a *multikey* unique index, which constrains values
+// across separate documents only — MongoDB permits a single document's array
+// to repeat a value, so duplicates within one product are caught by the
+// pre("validate") hook below instead.
+//
+// NOTE: this does not remove the old product-level `sku_1` index. Mongoose only
+// ever calls createIndex, so a database that already built it keeps it — and
+// once `sku` no longer exists on the documents they all index as null, which a
+// unique index rejects on the *second* product saved. An existing deployment
+// needs a one-off db.products.dropIndex("sku_1"); scripts/migrate-variants.mjs
+// does exactly that.
+productSchema.index({ "variants.sku": 1 }, { unique: true });
 
 // Derive the slug from the name, de-duplicating with a numeric suffix. The
 // unique index is still the last line of defence against a race.
@@ -120,6 +177,38 @@ productSchema.pre("validate", async function () {
   let suffix = 2;
   while (used.has(`${base}-${suffix}`)) suffix += 1;
   this.slug = `${base}-${suffix}`;
+});
+
+// The half of variant uniqueness no index can enforce (see above): two colours
+// of the *same* product sharing a name or a SKU. A repeated colour is
+// unpickable — two identical swatches — and a repeated SKU makes the warehouse
+// copy ambiguous, so both are rejected rather than quietly merged.
+productSchema.pre("validate", function () {
+  const colors = new Set<string>();
+  const skus = new Set<string>();
+
+  for (const variant of this.variants ?? []) {
+    const color = variant.color?.trim().toLowerCase();
+    const sku = variant.sku?.trim().toUpperCase();
+
+    if (color) {
+      if (colors.has(color)) {
+        this.invalidate(
+          "variants",
+          `Two colours are both named "${variant.color}"`,
+        );
+        return;
+      }
+      colors.add(color);
+    }
+    if (sku) {
+      if (skus.has(sku)) {
+        this.invalidate("variants", `Two colours share the SKU ${sku}`);
+        return;
+      }
+      skus.add(sku);
+    }
+  }
 });
 
 // Hot-reload guard — without it dev throws OverwriteModelError.

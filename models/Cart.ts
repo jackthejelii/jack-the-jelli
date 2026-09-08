@@ -8,15 +8,21 @@ import { MAX_LINE_QTY } from "@/features/cart/lib/limits";
  * sheet instantly, and this collection is what makes that survive a new device,
  * a cleared browser, or signing back in. Guests have no document here at all.
  *
- * Only `productId` and `qty` are stored, deliberately. A cart is not a record
- * of anything — names, prices and stock are read live off Product every time
- * the cart is shown (revalidateCart) and recomputed again at placement
+ * Only the line's identity and `qty` are stored, deliberately. A cart is not a
+ * record of anything — names, prices and stock are read live off Product every
+ * time the cart is shown (revalidateCart) and recomputed again at placement
  * (placeOrder), so snapshotting them here would only create a second, staler
  * copy of the truth. Contrast IOrderItem, which snapshots everything precisely
  * because an order *is* a record and must not change under later edits.
+ *
+ * That identity is the *pair* (productId, variantId), not the product alone:
+ * the black bifold and the tan bifold are two lines with two stock counts, and
+ * keying on the product would silently collapse them into one.
  */
 export interface ICartItem {
   productId: mongoose.Types.ObjectId;
+  /** Which colourway — the `_id` of an entry in that product's `variants`. */
+  variantId: mongoose.Types.ObjectId;
   qty: number;
 }
 
@@ -33,6 +39,7 @@ export interface ICart {
 const cartItemSchema = new Schema<ICartItem>(
   {
     productId: { type: Schema.Types.ObjectId, required: true },
+    variantId: { type: Schema.Types.ObjectId, required: true },
     qty: { type: Number, required: true, min: 1, max: MAX_LINE_QTY },
   },
   { _id: false },

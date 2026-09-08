@@ -16,7 +16,6 @@ import type {
   CategorySuggestion,
   Product as PublicProduct,
   ProductDetail,
-  ProductSuggestion,
   SuggestionsResult,
 } from "@/features/products/lib/types";
 
@@ -34,6 +33,14 @@ const SORT_MAP: Record<SortOption, Record<string, 1 | -1>> = {
 };
 
 type PopulatedCategory = { _id: Types.ObjectId; name: string } | null;
+
+/** The projection behind a search suggestion — see getProductSuggestions. */
+type LeanSuggestion = {
+  slug: string;
+  name: string;
+  price: number;
+  variants?: { images?: { url: string }[] }[];
+};
 
 /** A lean product with its category ref resolved by populate. */
 type LeanProduct = Omit<IProduct, "category"> & {
@@ -64,10 +71,15 @@ function toPublicProduct(product: LeanProduct): PublicProduct {
     slug: product.slug,
     name: product.name,
     price: product.price,
-    thumbnail: product.thumbnail,
     // A category deleted out from under a product shouldn't crash the grid.
     category: product.category?.name ?? "Uncategorised",
-    stock: product.stock,
+    variants: (product.variants ?? []).map((variant) => ({
+      id: String(variant._id),
+      color: variant.color,
+      hex: variant.hex,
+      stock: variant.stock,
+      thumbnail: variant.images?.[0]?.url,
+    })),
   };
 }
 
@@ -76,16 +88,20 @@ function toProductDetail(product: LeanProduct): ProductDetail {
     id: String(product._id),
     slug: product.slug,
     name: product.name,
-    sku: product.sku,
     // A category deleted out from under a product shouldn't crash the page.
     category: product.category?.name ?? "Uncategorised",
     price: product.price,
     description: product.description,
-    stock: product.stock,
-    thumbnail: product.thumbnail,
-    images: (product.images ?? []).map((image) => ({
-      url: image.url,
-      publicId: image.publicId,
+    variants: (product.variants ?? []).map((variant) => ({
+      id: String(variant._id),
+      color: variant.color,
+      hex: variant.hex,
+      sku: variant.sku,
+      stock: variant.stock,
+      images: (variant.images ?? []).map((image) => ({
+        url: image.url,
+        publicId: image.publicId,
+      })),
     })),
   };
 }
@@ -267,12 +283,14 @@ export async function getProductSuggestions({
 
   // No `populate` and a narrow `select`, unlike findLeanProducts: a suggestion
   // row draws a thumb, a name and a price, so anything else is a wasted read.
+  // The thumb has to come through `variants` — there is no product-level image
+  // any more — but only the first colourway's first photo is ever shown.
   const [products, total] = await Promise.all([
     Product.find(filter)
       .sort(SORT_MAP[DEFAULT_SORT])
       .limit(SUGGESTION_LIMIT)
-      .select("slug name price thumbnail")
-      .lean<ProductSuggestion[]>(),
+      .select("slug name price variants.images")
+      .lean<LeanSuggestion[]>(),
     Product.countDocuments(filter),
   ]);
 
@@ -282,7 +300,7 @@ export async function getProductSuggestions({
       slug: product.slug,
       name: product.name,
       price: product.price,
-      thumbnail: product.thumbnail,
+      thumbnail: product.variants?.[0]?.images?.[0]?.url,
     })),
     categories: categorySuggestions,
     total,

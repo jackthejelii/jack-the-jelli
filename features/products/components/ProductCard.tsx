@@ -1,7 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import AppLink from "@/components/layout/AppLink";
 import AddToCartButton from "@/features/products/components/AddToCartButton";
+import ColorSwatches from "@/features/products/components/ColorSwatches";
 import { formatPrice } from "@/features/products/lib/format";
+import { defaultVariant } from "@/features/products/lib/variants";
 import { Product } from "@/features/products/lib/types";
 
 export default function ProductCard({
@@ -18,6 +23,15 @@ export default function ProductCard({
   variant?: "default" | "quiet";
 }) {
   const href = `/collection/${product.slug}`;
+
+  // Opens on the first colourway that can actually be bought, so a tile whose
+  // black sold out leads with the tan rather than with a dead "Sold out".
+  const [selectedId, setSelectedId] = useState(
+    () => defaultVariant(product.variants)?.id ?? "",
+  );
+  const selected =
+    product.variants.find((colorway) => colorway.id === selectedId) ??
+    product.variants[0];
 
   /*
    * data-product-frame marks the image box. It is a styling hook, like
@@ -38,6 +52,10 @@ export default function ProductCard({
    */
 
   if (variant === "quiet") {
+    // No swatch row: this whole tile is one link, and nesting a radiogroup
+    // inside an anchor would make the colours unreachable by keyboard and
+    // ambiguous by mouse. A suggestion shows the default colour and hands the
+    // choice to the page it opens.
     return (
       <AppLink
         href={href}
@@ -48,7 +66,7 @@ export default function ProductCard({
           className="bg-surface-container relative aspect-square overflow-hidden"
         >
           <Image
-            src={product.thumbnail || "/image-placeholder.jpg"}
+            src={selected?.thumbnail || "/image-placeholder.jpg"}
             alt={product.name}
             fill
             // Always below the fold where this variant is used.
@@ -80,8 +98,16 @@ export default function ProductCard({
           className="bg-surface-container relative aspect-square overflow-hidden"
         >
           <Image
-            src={product.thumbnail || "/image-placeholder.jpg"}
-            alt={product.name}
+            // Keyed by the colourway so React swaps the element rather than
+            // reusing it — without this the browser keeps painting the old
+            // photograph until the new one has decoded.
+            key={selected?.id}
+            src={selected?.thumbnail || "/image-placeholder.jpg"}
+            alt={
+              selected?.color
+                ? `${product.name} in ${selected.color}`
+                : product.name
+            }
             fill
             // priority is deprecated in Next 16 — see ProductGallery.tsx.
             loading={priority ? "eager" : "lazy"}
@@ -99,10 +125,30 @@ export default function ProductCard({
         <p className="text-on-surface-variant mt-1 text-[16px] leading-[1.6]">
           {formatPrice(product.price)}
         </p>
+
+        {/* Renders nothing at all for a one-colour piece — see ColorSwatches. */}
+        <ColorSwatches
+          variants={product.variants}
+          selectedId={selected?.id ?? ""}
+          onSelect={setSelectedId}
+          size="sm"
+          className="mt-3 justify-center"
+        />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <AddToCartButton product={product} />
+        {selected && (
+          <AddToCartButton
+            product={product}
+            colorway={{
+              id: selected.id,
+              color: selected.color,
+              hex: selected.hex,
+              stock: selected.stock,
+              thumbnail: selected.thumbnail,
+            }}
+          />
+        )}
         <AppLink
           href={href}
           className="border-secondary text-foreground hover:bg-secondary hover:text-background ease-editorial inline-flex items-center justify-center rounded-none border bg-transparent px-3 py-3 text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,border-color,transform] duration-(--motion-quick) active:translate-y-px"

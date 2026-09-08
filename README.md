@@ -128,9 +128,21 @@ all. `lib/users.ts` types the raw `user` collection for the places that read it.
 
 ### `Product`
 
-`name · slug · sku · category(ref) · price · description · stock · status ·
-featured · thumbnail · images[{url, publicId}] · comparePrice · tags`
+`name · slug · category(ref) · price · description · status · featured ·
+variants[{_id, color, hex, sku, stock, images[{url, publicId}]}] ·
+comparePrice · tags`
 
+- **A colour is a variant inside one product, not a sibling product.** `sku`,
+  `stock` and `images` live on the colourway because all three genuinely differ
+  per colour; name, price, description and category stay on the parent so
+  repricing can never leave two colours disagreeing.
+- **`variants` is required and never empty**, so a single-colour piece is just a
+  one-variant piece and no call site branches on "does this have variants?".
+  The first entry is the default colour.
+- **A variant's `_id` is load-bearing.** It is what a cart line, an order line
+  and the stock decrement all address, so `updateProduct` reuses it rather than
+  minting a fresh one — regenerating them would orphan live carts and break the
+  stock restore on past orders.
 - `status`: `Draft | Published | Archived`. Every storefront query filters on
   `status: "Published"`.
 - Slug is auto-derived from the name in a `pre("validate")` hook, de-duplicated
@@ -139,7 +151,10 @@ featured · thumbnail · images[{url, publicId}] · comparePrice · tags`
   deletion possible.
 - Five compound indexes exist so each filter carries its sort key
   (`status+createdAt`, `status+price`, `status+category+createdAt`,
-  `status+name`, `status+featured+createdAt`).
+  `status+name`, `status+featured+createdAt`), plus a **unique multikey index on
+  `variants.sku`**. That index only constrains across documents — MongoDB lets
+  one document's array repeat a value — so two colours of the *same* product
+  sharing a name or SKU are caught by a second `pre("validate")` hook instead.
 - `featured` is the admin-set flag behind the homepage strip: a checkbox on
   both product forms, and a one-click column on the inventory table
   (`setProductFeatured`, which writes that key alone rather than re-validating
@@ -168,10 +183,14 @@ paymentUpdatedAt · statusHistory[]`
 
 Decisions baked into the schema:
 
-- **Line items are snapshots.** Name, SKU, slug, price, lineTotal and thumbnail
-  are copied at purchase time. The `product` ref is kept for provenance only
-  (stock restore, reporting), so renaming or repricing a product can never
+- **Line items are snapshots.** Name, colour, SKU, slug, price, lineTotal and
+  thumbnail are copied at purchase time — the SKU and thumbnail are the
+  *colourway's*, since that is what gets picked off the shelf. The `product` ref
+  is kept for provenance only, so renaming or repricing a product can never
   rewrite order history.
+- **`variantId` is the exception to that.** Unlike `product` it is not
+  provenance: it is the address `restoreStock` decrements back into on a cancel
+  or return, so a line without it cannot be un-sold.
 - **`userId` is a plain ObjectId, deliberately not a `ref`** — Better Auth owns
   the `user` collection and there is no `models/User.ts`, so `populate()` would
   throw `MissingSchemaError`. Null means guest _or_ deleted account;
@@ -186,11 +205,19 @@ Decisions baked into the schema:
 
 ### `Cart`
 
-`userId (unique) · items[{productId, qty}]`. Signed-in shoppers only — guests
-have no document. Stores **only** id + quantity: names, prices and stock are
-re-read live every time (`revalidateCart`, then again in `placeOrder`), because
-a cart is a draft, not a record. A TTL index expires carts 7 days after the last
-write.
+`userId (unique) · items[{productId, variantId, qty}]`. Signed-in shoppers only
+— guests have no document. Stores **only** the line's identity + quantity:
+names, prices and stock are re-read live every time (`revalidateCart`, then
+again in `placeOrder`), because a cart is a draft, not a record. A TTL index
+expires carts 7 days after the last write.
+
+That identity is the **pair** `(productId, variantId)`, not the product alone —
+the same wallet in black and in tan is two lines with two stock counts. One
+helper, `lineKey` in `features/cart/lib/types.ts`, defines it for both the
+client store and the server actions so the two can never disagree. The persisted
+localStorage cart is `jtj-cart-v2`; v1 carts are dropped rather than migrated,
+because a v1 line carries no `variantId` and there is no honest way to guess
+which colour it meant.
 
 > **Hot-reload caveat on every model:** the `mongoose.models.X || mongoose.model(...)`
 > guard prevents `OverwriteModelError` in dev, but it also means **schema and
@@ -248,8 +275,8 @@ Guest-first: **no `requireAuth()`**, because Better Auth requires email
 verification before sign-in, so gating checkout on an account would make it
 impossible to finish an order in one sitting. That makes `placeOrder` a fully
 public HTTP endpoint, so every input is treated as hostile and every figure is
-recomputed server-side. The client's cart is read as `(productId, qty)` and
-nothing more.
+recomputed server-side. The client's cart is read as `(productId, variantId,
+qty)` and nothing more.
 
 Order of operations:
 
@@ -365,14 +392,20 @@ would report success for a 403, a bad key, or a quota trip.
 
 ## 9. Images
 
-**Source photos must be 1:1 square, 2048×2048, JPEG or PNG, sRGB, on a seamless
-white background, product centred at ~85% of the frame width.** The uploader
-accepts only `image/jpeg` and `image/png` (`ProductMediaUploader.tsx`) — iPhone
-HEIC and WebP are rejected outright.
+**Photographs are stored raw.** The file the admin picks is uploaded to
+Cloudinary unchanged — nothing here trims, crops, pads, resizes or recompresses
+it, on the client or the server, and nothing should start. The only upload-time
+constraint is the format: the uploader accepts `image/jpeg` and `image/png` only
+(`ProductMediaUploader.tsx`) — iPhone HEIC and WebP are rejected outright.
 
-`ProductCard` renders that in an `aspect-square` box with **`object-contain`** —
-contain, not cover, so an off-spec upload letterboxes instead of being silently
-sliced. `ProductCardSkeleton` mirrors the ratio and must change with it.
+Framing is a **capture-and-export preference, not a processing step.** Shoot 1:1
+square, 2048×2048, sRGB, on a seamless white background with the product centred
+at ~85% of the frame width and the grid comes out uniform, but nothing enforces
+it. `ProductCard` renders in an `aspect-square` box with **`object-contain`** —
+contain, not cover, so an off-spec photo letterboxes instead of being silently
+sliced, and mixed source ratios sit at visibly different sizes down the grid.
+That is deliberate: the photograph is never cropped to tidy a row.
+`ProductCardSkeleton` mirrors the ratio and must change with it.
 
 The other image surfaces are **deliberately still 4:5 or fixed-size**: the
 detail-page gallery (`ProductGallery` / `ProductDetailView`, whose

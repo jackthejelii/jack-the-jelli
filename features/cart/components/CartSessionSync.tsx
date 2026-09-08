@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { revalidateCart } from "@/features/cart/lib/cart-actions";
 import { saveCart, syncCartOnSignIn } from "@/features/cart/lib/cart-sync";
 import { useCartHydrated, useCartStore } from "@/features/cart/lib/cartStore";
+import { lineKey } from "@/features/cart/lib/types";
 
 /**
  * Keeps the browser's cart honest about whose it is, and mirrors it to the
@@ -22,8 +23,10 @@ import { useCartHydrated, useCartStore } from "@/features/cart/lib/cartStore";
 const SAVE_DELAY_MS = 500;
 
 /** The saved cart's whole content, for telling a real change from a reprice. */
-function linesKey(lines: { productId: string; qty: number }[]): string {
-  return lines.map((line) => `${line.productId}:${line.qty}`).join(",");
+function linesKey(
+  lines: { productId: string; variantId: string; qty: number }[],
+): string {
+  return lines.map((line) => `${lineKey(line)}:${line.qty}`).join(",");
 }
 
 export default function CartSessionSync() {
@@ -62,6 +65,7 @@ export default function CartSessionSync() {
       ownerId === null
         ? store.items.map((line) => ({
             productId: line.productId,
+            variantId: line.variantId,
             qty: line.qty,
           }))
         : [];
@@ -87,11 +91,14 @@ export default function CartSessionSync() {
         // rather than waiting for the sheet to be opened, or the badge would
         // count pieces the cart can't yet name.
         if (lines.length === 0) return;
-        return revalidateCart(lines.map((line) => line.productId)).then(
-          (snapshots) => {
-            if (!cancelled) useCartStore.getState().reconcile(snapshots);
-          },
-        );
+        return revalidateCart(
+          lines.map((line) => ({
+            productId: line.productId,
+            variantId: line.variantId,
+          })),
+        ).then((snapshots) => {
+          if (!cancelled) useCartStore.getState().reconcile(snapshots);
+        });
       })
       .catch(() => {
         if (cancelled) return;
@@ -142,6 +149,7 @@ export default function CartSessionSync() {
 
       const lines = state.items.map((line) => ({
         productId: line.productId,
+        variantId: line.variantId,
         qty: line.qty,
       }));
       // Compared by content, not by reference: reconcile() rebuilds the array

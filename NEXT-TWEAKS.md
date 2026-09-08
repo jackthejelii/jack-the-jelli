@@ -26,33 +26,59 @@ database, so nothing an admin publishes, renames, reprices, or takes out of
 stock ever shows up on the front page. The homepage is currently a picture of a
 store rather than the store.
 
-### 3. Replace the Craftsmanship section
+### ~~3. Decide what follows the product section~~ — done
 
-`CraftsmanshipGrid` is three static image tiles with a heading. Whatever
-replaces it should give a visitor something to do or something that moves —
-that stretch of the page currently earns no attention and converts nothing.
+`CraftsmanshipGrid` — the "Uncompromising Quality" bento of three static image
+tiles — was removed and replaced by the featured strip below.
 
-### 4. A product needs to come in more than one colour
+### ~~4. A product needs to come in more than one colour~~ — done
 
-The brand's next natural move — the same wallet in black and tan — has nowhere
-to live. This is not a display detail: `Product` carries one `sku` and one
-`stock` number, the cart keys a line by `productId` alone (`setQty` and
-`removeItem` take nothing else), and an order line snapshots a single
-name/SKU/price. A colour therefore changes what a cart line *is*, which stock
-count gets decremented, and what the receipt says it sold. Worth settling one
-question before any code: is a colour a variant inside one product, or its own
-product sharing a page?
+Settled as **a variant inside one product**, not a sibling product per colour:
+one name, one price, one page, a swatch row that swaps the gallery.
 
-### 5. A featured-products carousel on the homepage
+`sku`, `stock` and `images` left `Product` entirely and moved onto a required
+`variants[]` (min 1), so a single-colour piece is just a one-variant piece and
+no call site branches on "does this have variants?". A cart line is now keyed by
+the `(productId, variantId)` pair through one shared `lineKey` helper; the
+persisted cart bumped to `jtj-cart-v2` and v1 carts are dropped, since a line
+with no variant id can't be honestly migrated onto a colour. `placeOrder`'s
+guarded decrement became `$elemMatch` + `$inc: {"variants.$.stock": -qty}` —
+still one atomic op, still no transaction — and `restoreStock` mirrors it, which
+is why `IOrderItem` carries `variantId` as load-bearing rather than provenance.
+Order lines snapshot the colour name too, so receipts, the confirmation email
+and the packing list all say which one shipped.
 
-Nothing on the front page moves or invites browsing — the visitor either clicks
-"Explore Collection" or leaves. A featured strip that animates (motion-primitives
-or Watermelon UI were the two shortlisted; **confirm Watermelon's licence first**,
-its site refused to serve terms) would give the homepage something to do.
+**Run `node scripts/migrate-variants.mjs --apply` before using this against an
+existing database.** It wraps each product's old fields into one variant _and_
+drops the stale `sku_1` unique index — without that drop every product indexes
+`sku: null` and the second one saved fails with E11000, a long way from its
+cause. Every migrated colour is named "Standard"; the script can't invent a real
+name, so rename them in `/admin/products`.
 
-Depends on #2: it has to be a real query, not a second hardcoded strip, or it
-inherits the same problem. Also needs a way to mark a product as featured — the
-unused `tags` field on the schema is the obvious candidate.
+Deliberately not done, if they ever matter: a colour can't carry its own price
+or be hidden without archiving the whole product, colours can't be hand-ordered
+(the first is the default), and the suggestion-tile card variant shows the
+default colour with no swatches — it is one link, and a radiogroup inside an
+anchor is unreachable by keyboard.
+
+### ~~5. A featured-products carousel on the homepage~~ — done
+
+`FeaturedSection` / `FeaturedStrip` now sit where the craftsmanship grid was: a
+draggable embla strip of whatever an admin has flagged — from the Featured
+column on `/admin/products`, or the checkbox on either product form — entering
+as one staggered reveal. It is a real query
+(`getFeaturedProducts`), so it does not inherit #2's problem, and it renders
+nothing at all when nothing is flagged.
+
+Neither shortlisted animation library was needed — the existing `Reveal`
+component and the `--motion-*` tokens covered it, so no new dependency.
+`tags` was left alone: `featured` is its own indexed boolean on `Product`, which
+maps to a checkbox and can't be broken by a typo in a free-text field.
+
+Two things it deliberately does not do, if they ever matter: the strip is
+ordered newest-first with no way to hand-order it (that needs a `featuredOrder`
+field), and nothing caps how many products an admin can flag beyond
+`FEATURED_LIMIT` truncating the display at 8.
 
 ---
 
@@ -60,12 +86,11 @@ unused `tags` field on the schema is the obvious candidate.
 
 ### Content and trust
 
-- [ ] **The homepage images are hotlinked from Google.** Both
-      `ProductSection` and `CraftsmanshipGrid` load AI-generated placeholders
-      from `lh3.googleusercontent.com`, each marked with a `TODO` to replace
-      them. They are third-party URLs on someone else's CDN — they can break
-      without notice, and they are not the actual product. Real photography is
-      overdue.
+- [ ] **The homepage images are hotlinked from Google.** `ProductSection`
+      loads AI-generated placeholders from `lh3.googleusercontent.com`, marked
+      with a `TODO` to replace them. They are third-party URLs on someone
+      else's CDN — they can break without notice, and they are not the actual
+      product. Real photography is overdue.
 - [ ] **The footer is a dead end.** The logo links to `#`, and the only links
       are Privacy and Terms. No contact, no social, no shipping/returns, no
       collection link.

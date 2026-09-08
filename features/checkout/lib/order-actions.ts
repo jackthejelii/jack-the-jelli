@@ -8,7 +8,12 @@ import { connectDB } from "@/lib/db";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getDuplicateKeyFields } from "@/lib/mongo-errors";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
-import { Order, Product, type IOrderItem } from "@/models";
+import {
+  Order,
+  Product,
+  type IOrderItem,
+  type IProductVariant,
+} from "@/models";
 // Pure FormData/zod helpers — nothing admin-specific about either, they just
 // happen to have been written for the admin actions first.
 import { collectValues, toFieldErrors } from "@/features/admin/lib/form-state";
@@ -34,12 +39,11 @@ import {
 type PurchasableProduct = {
   _id: Types.ObjectId;
   name: string;
-  sku: string;
   slug: string;
   price: number;
-  thumbnail?: string;
-  stock: number;
   status: string;
+  /** SKU, stock and photographs all live per colourway — see models/Product.ts. */
+  variants: IProductVariant[];
 };
 
 const RETRY_MESSAGE =
@@ -181,43 +185,65 @@ export async function placeOrder(
     }
 
     if (!placedOrderNumber) {
+      // Deduped: two colourways of one piece are two lines against one
+      // document, and asking Mongo for it twice would be a wasted read.
       const products = await Product.find({
-        _id: { $in: items.map((line) => new Types.ObjectId(line.productId)) },
+        _id: {
+          $in: [...new Set(items.map((line) => line.productId))].map(
+            (id) => new Types.ObjectId(id),
+          ),
+        },
       })
-        .select("name sku slug price thumbnail stock status")
+        .select("name slug price status variants")
         .lean<PurchasableProduct[]>();
 
       const byId = new Map(
         products.map((product) => [String(product._id), product]),
       );
 
+      /** The colourway a line names, or undefined if it no longer exists. */
+      const findVariant = (
+        product: PurchasableProduct | undefined,
+        variantId: string,
+      ) =>
+        product?.variants?.find((variant) => String(variant._id) === variantId);
+
       // Checked before anything is written: an order that can't be filled
       // should never create a row at all.
       const unavailable: UnavailableLine[] = [];
       for (const line of items) {
         const product = byId.get(line.productId);
+        const variant = findVariant(product, line.variantId);
 
-        if (!product || product.status !== "Published") {
+        // A deleted colourway is treated exactly like an unpublished product:
+        // there is nothing to sell, and the cart is told to drop the line.
+        if (!product || product.status !== "Published" || !variant) {
           unavailable.push({
             productId: line.productId,
+            variantId: line.variantId,
             name: product?.name ?? "One of your pieces",
+            color: variant?.color ?? "",
             available: 0,
             requested: line.qty,
             reason: "unpublished",
           });
-        } else if (product.stock <= 0) {
+        } else if (variant.stock <= 0) {
           unavailable.push({
             productId: line.productId,
+            variantId: line.variantId,
             name: product.name,
+            color: variant.color,
             available: 0,
             requested: line.qty,
             reason: "sold-out",
           });
-        } else if (product.stock < line.qty) {
+        } else if (variant.stock < line.qty) {
           unavailable.push({
             productId: line.productId,
+            variantId: line.variantId,
             name: product.name,
-            available: product.stock,
+            color: variant.color,
+            available: variant.stock,
             requested: line.qty,
             reason: "insufficient-stock",
           });
@@ -238,15 +264,22 @@ export async function placeOrder(
       // ever reads through to the live product again.
       const orderItems: IOrderItem[] = items.map((line) => {
         const product = byId.get(line.productId)!;
+        // Non-null: the loop above returned for every line whose product or
+        // colourway was missing, so anything reaching here has both.
+        const variant = findVariant(product, line.variantId)!;
         return {
           product: product._id,
+          variantId: variant._id,
           name: product.name,
-          sku: product.sku,
+          color: variant.color,
+          // The variant's SKU and photograph, not the product's — the shelf is
+          // picked by colourway and the receipt should show what was bought.
+          sku: variant.sku,
           slug: product.slug,
           price: product.price,
           qty: line.qty,
           lineTotal: product.price * line.qty,
-          thumbnail: product.thumbnail,
+          thumbnail: variant.images[0]?.url,
         };
       });
 
@@ -328,16 +361,24 @@ export async function placeOrder(
       }
 
       // Stock is not reserved at add-to-cart, so this is the first and only
-      // moment it moves. The filter does the checking: `stock: {$gte: qty}`
-      // makes the read-and-write one atomic operation, which a
-      // read-then-check-then-write could never be.
+      // moment it moves. The filter does the checking: matching the colourway
+      // and `stock: {$gte: qty}` in one $elemMatch makes the read-and-write a
+      // single atomic operation, which a read-then-check-then-write could never
+      // be. `variants.$` writes back to exactly the element that matched, so
+      // decrementing the black bifold can never touch the tan one.
       const decremented: IOrderItem[] = [];
       let lost: UnavailableLine | null = null;
 
       for (const line of orderItems) {
         const result = await Product.updateOne(
-          { _id: line.product, status: "Published", stock: { $gte: line.qty } },
-          { $inc: { stock: -line.qty } },
+          {
+            _id: line.product,
+            status: "Published",
+            variants: {
+              $elemMatch: { _id: line.variantId, stock: { $gte: line.qty } },
+            },
+          },
+          { $inc: { "variants.$.stock": -line.qty } },
         );
 
         if (result.modifiedCount === 1) {
@@ -345,18 +386,23 @@ export async function placeOrder(
           continue;
         }
 
-        // Someone else got there first between the pre-check and now.
-        const current = await Product.findById(line.product)
-          .select("stock status")
-          .lean<{ stock: number; status: string } | null>();
+        // Someone else got there first between the pre-check and now. Projected
+        // down to the one colourway rather than pulling the whole variants
+        // array back just to read a single number off it.
+        const current = await Product.findOne(
+          { _id: line.product },
+          { status: 1, variants: { $elemMatch: { _id: line.variantId } } },
+        ).lean<{ status: string; variants?: { stock: number }[] } | null>();
         const available =
           current && current.status === "Published"
-            ? Math.max(0, current.stock)
+            ? Math.max(0, current.variants?.[0]?.stock ?? 0)
             : 0;
 
         lost = {
           productId: String(line.product),
+          variantId: String(line.variantId),
           name: line.name,
+          color: line.color,
           available,
           requested: line.qty,
           reason: available === 0 ? "sold-out" : "insufficient-stock",
@@ -370,8 +416,11 @@ export async function placeOrder(
           await Product.bulkWrite(
             decremented.map((line) => ({
               updateOne: {
-                filter: { _id: line.product },
-                update: { $inc: { stock: line.qty } },
+                // Addressed by colourway, mirroring the decrement above —
+                // returning the units to the product would put them back on
+                // whichever colour happened to sit first in the array.
+                filter: { _id: line.product, "variants._id": line.variantId },
+                update: { $inc: { "variants.$.stock": line.qty } },
               },
             })),
           );
@@ -450,6 +499,7 @@ export async function placeOrder(
         customerName: fullName,
         items: summary.items.map((line) => ({
           name: line.name,
+          color: line.color,
           qty: line.qty,
           lineTotal: line.lineTotal,
         })),

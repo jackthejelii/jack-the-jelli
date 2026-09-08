@@ -150,7 +150,7 @@ export interface OrderConfirmationParams {
   to: string;
   orderNumber: string;
   customerName: string;
-  items: { name: string; qty: number; lineTotal: number }[];
+  items: { name: string; color: string; qty: number; lineTotal: number }[];
   subtotal: number;
   deliveryFee: number;
   totalAmount: number;
@@ -172,7 +172,7 @@ function renderOrderSummary({
     .map(
       (line) => `
       <tr>
-        <td style="padding: 8px 0; font-size: 14px; color: #1a1a1a;">${escapeHtml(line.name)} <span style="color: #8a7968;">× ${line.qty}</span></td>
+        <td style="padding: 8px 0; font-size: 14px; color: #1a1a1a;">${escapeHtml(line.name)}${line.color ? ` <span style="color: #8a7968;">(${escapeHtml(line.color)})</span>` : ""} <span style="color: #8a7968;">× ${line.qty}</span></td>
         <td style="padding: 8px 0; font-size: 14px; text-align: right; color: #1a1a1a;">${formatPrice(line.lineTotal)}</td>
       </tr>`,
     )

@@ -68,6 +68,17 @@ interface ProductMediaUploaderProps {
   onChange?: () => void;
   /** Already-uploaded images, when editing an existing product. */
   initialImages?: ProductImageValue[];
+  /**
+   * Name for the hidden input carrying the already-uploaded list. `null`
+   * renders none — which is what VariantEditor needs, since one uploader per
+   * colourway would otherwise post a dozen inputs all called "images".
+   */
+  hiddenInputName?: string | null;
+  /**
+   * Tightens the dropzone and the thumbnail grid for use inside a colourway
+   * card, where this is one control among several rather than the section.
+   */
+  compact?: boolean;
   ref?: React.Ref<ProductMediaUploaderHandle>;
 }
 
@@ -124,6 +135,8 @@ async function uploadToCloudinary(file: File) {
 export default function ProductMediaUploader({
   onChange,
   initialImages,
+  hiddenInputName = "images",
+  compact = false,
   ref,
 }: ProductMediaUploaderProps) {
   // Existing images start life as finished uploads. Their "preview" is the
@@ -290,7 +303,7 @@ export default function ProductMediaUploader({
     .map((asset) => ({ url: asset.url!, publicId: asset.publicId! }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className={cn("flex flex-col", compact ? "gap-4" : "gap-6")}>
       <input
         ref={inputRef}
         type="file"
@@ -304,7 +317,13 @@ export default function ProductMediaUploader({
         }}
       />
 
-      <input type="hidden" name="images" value={JSON.stringify(persisted)} />
+      {hiddenInputName !== null && (
+        <input
+          type="hidden"
+          name={hiddenInputName}
+          value={JSON.stringify(persisted)}
+        />
+      )}
 
       {/* Dropzone */}
       <button
@@ -321,18 +340,20 @@ export default function ProductMediaUploader({
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "group bg-muted/50 border-border hover:border-foreground flex aspect-21/9 w-full flex-col items-center justify-center border border-dashed transition-colors duration-300",
+          "group bg-muted/50 border-border hover:border-foreground flex w-full flex-col items-center justify-center border border-dashed transition-colors duration-300",
+          compact ? "py-8" : "aspect-21/9",
           isDragging && "border-foreground bg-muted",
         )}
       >
         <CloudUpload
           className={cn(
-            "text-muted-foreground group-hover:text-foreground mb-4 size-10 transition-colors",
+            "text-muted-foreground group-hover:text-foreground transition-colors",
             isDragging && "text-foreground",
+            compact ? "mb-2 size-6" : "mb-4 size-10",
           )}
         />
         <span className="text-muted-foreground group-hover:text-foreground text-xs font-semibold tracking-widest uppercase transition-colors">
-          Upload New Assets
+          {compact ? "Photographs for this colour" : "Upload New Assets"}
         </span>
         <span className="text-muted-foreground/80 mt-2 text-[13px]">
           Drag and drop high-resolution JPG or PNG
@@ -340,7 +361,14 @@ export default function ProductMediaUploader({
       </button>
 
       {/* Thumbnails */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+      <div
+        className={cn(
+          "grid gap-4",
+          compact
+            ? "grid-cols-3 sm:grid-cols-5"
+            : "grid-cols-2 sm:grid-cols-4 sm:gap-6",
+        )}
+      >
         {assets.map((asset, index) => (
           <div
             key={asset.id}

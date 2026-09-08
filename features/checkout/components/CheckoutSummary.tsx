@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import { ArrowRight, Loader2, Truck } from "lucide-react";
-import type { UnavailableLine } from "@/features/cart/lib/types";
-import { useCartStore, type CartItem } from "@/features/cart/lib/cartStore";
+import { lineKey, type UnavailableLine } from "@/features/cart/lib/types";
+import {
+  lineLabel,
+  useCartStore,
+  type CartItem,
+} from "@/features/cart/lib/cartStore";
 import {
   amountToFreeDelivery,
   getDeliveryFee,
@@ -65,7 +69,7 @@ export default function CheckoutSummary({
 
       <ul className="border-outline-variant/20 mt-6 border-b pb-6">
         {items.map((line) => (
-          <li key={line.productId} className="flex gap-4 py-3">
+          <li key={lineKey(line)} className="flex gap-4 py-3">
             <div className="bg-surface-container relative h-16 w-14 shrink-0 overflow-hidden">
               <Image
                 src={line.thumbnail || "/image-placeholder.jpg"}
@@ -79,6 +83,16 @@ export default function CheckoutSummary({
               <p className="text-foreground text-[15px] leading-snug">
                 {line.name}
               </p>
+              {line.color && (
+                <p className="text-on-surface-variant mt-0.5 flex items-center gap-1.5 text-[12px]">
+                  <span
+                    aria-hidden="true"
+                    className="border-outline-variant/50 size-2.5 shrink-0 border"
+                    style={{ backgroundColor: line.hex }}
+                  />
+                  {line.color}
+                </p>
+              )}
               <p
                 className={`mt-1 text-[11px] font-semibold tracking-widest uppercase ${
                   line.qty > 0 ? "text-on-surface-variant" : "text-destructive"
@@ -109,9 +123,11 @@ export default function CheckoutSummary({
           )}
           <ul className="mt-3 flex flex-col gap-3">
             {unavailable.map((line) => (
-              <li key={line.productId} className="text-[14px]">
+              <li key={lineKey(line)} className="text-[14px]">
                 <p className="text-foreground">
-                  {line.name}:{" "}
+                  {/* Named with its colour: "sold out" against a bare product
+                      name is unreadable when the cart holds two of them. */}
+                  {lineLabel(line)}:{" "}
                   {line.available === 0
                     ? "sold out"
                     : `only ${line.available} left, you asked for ${line.requested}`}
@@ -120,7 +136,7 @@ export default function CheckoutSummary({
                   {line.available > 0 && (
                     <button
                       type="button"
-                      onClick={() => setQty(line.productId, line.available)}
+                      onClick={() => setQty(lineKey(line), line.available)}
                       className="text-foreground text-[12px] font-semibold tracking-widest uppercase underline underline-offset-4"
                     >
                       Reduce to {line.available}
@@ -128,7 +144,7 @@ export default function CheckoutSummary({
                   )}
                   <button
                     type="button"
-                    onClick={() => removeItem(line.productId)}
+                    onClick={() => removeItem(lineKey(line))}
                     className="text-on-surface-variant hover:text-foreground text-[12px] font-semibold tracking-widest uppercase underline underline-offset-4"
                   >
                     Remove

@@ -9,7 +9,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import type { ZodType } from "zod";
-import type { ProductMediaUploaderHandle } from "@/features/admin/components/ProductMediaUploader";
+import type { VariantEditorHandle } from "@/features/admin/components/VariantEditor";
 import {
   type AdminFormState,
   toFieldErrors,
@@ -21,7 +21,12 @@ import {
 import { readProductFormData } from "@/features/admin/lib/product-schema";
 
 interface UseProductSubmitOptions {
-  uploaderRef: React.RefObject<ProductMediaUploaderHandle | null>;
+  /**
+   * The colour editor, which owns one media uploader per colourway and commits
+   * them all as a unit — see VariantEditor. Photographs belong to a colour, so
+   * there is no longer a single product-level uploader to hold here.
+   */
+  variantsRef: React.RefObject<VariantEditorHandle | null>;
   /** The dispatch returned by useActionState. */
   formAction: (formData: FormData) => void;
   /** The state returned by useActionState, watched to close out the toast. */
@@ -51,7 +56,7 @@ interface UseProductSubmitOptions {
  *     saving dead URLs.
  */
 export function useProductSubmit({
-  uploaderRef,
+  variantsRef,
   formAction,
   state,
   schema,
@@ -70,9 +75,9 @@ export function useProductSubmit({
     inFlightUploadsRef.current = [];
     if (publicIds.length === 0) return;
 
-    uploaderRef.current?.restage(publicIds);
+    variantsRef.current?.restage(publicIds);
     void discardUploads(publicIds);
-  }, [uploaderRef]);
+  }, [variantsRef]);
 
   // The action only returns when it failed — success redirects — so a new state
   // object while a toast is live means the save was rejected.
@@ -151,15 +156,15 @@ export function useProductSubmit({
       }
       setClientErrors(undefined);
 
-      const uploader = uploaderRef.current;
-      const pending = uploader?.pendingCount() ?? 0;
+      const editor = variantsRef.current;
+      const pending = editor?.pendingCount() ?? 0;
       if (pending > 0) {
         toast.loading(`Uploading image 1 of ${pending}…`, { id: toastId });
       }
 
       try {
-        if (uploader) {
-          const { images, uploadedPublicIds } = await uploader.commit(
+        if (editor) {
+          const { variants, uploadedPublicIds } = await editor.commit(
             (uploaded, total) => {
               if (uploaded < total) {
                 toast.loading(`Uploading image ${uploaded + 1} of ${total}…`, {
@@ -169,7 +174,9 @@ export function useProductSubmit({
             },
           );
           inFlightUploadsRef.current = uploadedPublicIds;
-          formData.set("images", JSON.stringify(images));
+          // Overwrites the editor's own hidden input, which carries only the
+          // photographs that were already on Cloudinary.
+          formData.set("variants", JSON.stringify(variants));
         }
       } catch (error) {
         // Whatever landed before the failure still needs cleaning up.
@@ -201,7 +208,7 @@ export function useProductSubmit({
       onBeforeDispatch,
       rollbackUploads,
       schema,
-      uploaderRef,
+      variantsRef,
     ],
   );
 

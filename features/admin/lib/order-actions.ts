@@ -73,13 +73,21 @@ function readNote(formData: FormData): string | undefined {
  * The session is not optional. Restoring stock is always the second half of a
  * claim — the order update that stamps stockRestoredAt — and the two only mean
  * anything committed together, so every caller has a transaction to join.
+ *
+ * Addressed by colourway, mirroring the decrement in placeOrder. This is why
+ * IOrderItem carries `variantId` as more than provenance: without it there is
+ * no way to say *which* colour to un-sell, and the units would land on
+ * whichever variant happened to sit first in the array. A colourway an admin
+ * has since deleted matches nothing and is quietly skipped — bulkWrite reports
+ * the miss rather than throwing, and there is no sensible place to put stock
+ * for a colour that no longer exists.
  */
 function restoreStock(items: IOrderItem[], session: ClientSession) {
   return Product.bulkWrite(
     items.map((item) => ({
       updateOne: {
-        filter: { _id: item.product },
-        update: { $inc: { stock: item.qty } },
+        filter: { _id: item.product, "variants._id": item.variantId },
+        update: { $inc: { "variants.$.stock": item.qty } },
       },
     })),
     { session },

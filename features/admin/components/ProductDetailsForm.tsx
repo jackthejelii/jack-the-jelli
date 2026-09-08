@@ -53,22 +53,17 @@ export default function ProductDetailsForm({
             <FieldError>{errors?.name}</FieldError>
           </Field>
 
+          {/* SKU and stock are not here: both belong to a colourway, and the
+              colour editor below owns them. Price stays, because it is the one
+              commercial figure that is deliberately shared across colours. */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <Field data-invalid={Boolean(errors?.sku) || undefined}>
-              <FieldLabel htmlFor="sku" className={fieldLabelClassName}>
-                SKU
-              </FieldLabel>
-              <Input
-                id="sku"
-                name="sku"
-                defaultValue={values?.sku ?? product.sku}
-                aria-invalid={Boolean(errors?.sku)}
-                className={underlineInputClassName}
-                maxLength={16}
-                placeholder="e.g. JTJ-BIF-001"
-              />
-              <FieldError>{errors?.sku}</FieldError>
-            </Field>
+            <CategorySelect
+              categories={categories}
+              defaultValue={values?.category ?? product.categoryId}
+              error={errors?.category}
+              triggerClassName="border-b-border h-12 rounded-none border-t-0 border-r-0 border-b border-l-0"
+              onDirty={onDirty}
+            />
             <Field data-invalid={Boolean(errors?.price) || undefined}>
               <FieldLabel htmlFor="price" className={fieldLabelClassName}>
                 Price (BDT)
@@ -85,31 +80,6 @@ export default function ProductDetailsForm({
                 placeholder="0.00"
               />
               <FieldError>{errors?.price}</FieldError>
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <CategorySelect
-              categories={categories}
-              defaultValue={values?.category ?? product.categoryId}
-              error={errors?.category}
-              triggerClassName="border-b-border h-12 rounded-none border-t-0 border-r-0 border-b border-l-0"
-              onDirty={onDirty}
-            />
-            <Field data-invalid={Boolean(errors?.stock) || undefined}>
-              <FieldLabel htmlFor="stock" className={fieldLabelClassName}>
-                Current Stock
-              </FieldLabel>
-              <Input
-                id="stock"
-                name="stock"
-                type="number"
-                min={0}
-                defaultValue={values?.stock ?? String(product.stock)}
-                aria-invalid={Boolean(errors?.stock)}
-                className={underlineInputClassName}
-              />
-              <FieldError>{errors?.stock}</FieldError>
             </Field>
           </div>
         </div>

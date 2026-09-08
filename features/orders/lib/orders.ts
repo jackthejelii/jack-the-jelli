@@ -45,7 +45,9 @@ export function toOrderDTO(order: LeanOrder): OrderDTO {
     deliveryZone: order.deliveryZone,
     items: order.items.map((item) => ({
       productId: String(item.product),
+      variantId: String(item.variantId),
       name: item.name,
+      color: item.color,
       sku: item.sku,
       slug: item.slug,
       price: item.price,

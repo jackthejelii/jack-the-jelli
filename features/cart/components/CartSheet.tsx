@@ -18,6 +18,7 @@ import {
   useCartStore,
 } from "@/features/cart/lib/cartStore";
 import { useCartRevalidation } from "@/features/cart/hooks/useCartRevalidation";
+import { lineKey } from "@/features/cart/lib/types";
 import CartLine from "@/features/cart/components/CartLine";
 import {
   amountToFreeDelivery,
@@ -111,7 +112,7 @@ export default function CartSheet() {
             <ul className="flex-1 overflow-y-auto px-6">
               {lines.map((line) => (
                 <CartLine
-                  key={line.productId}
+                  key={lineKey(line)}
                   line={line}
                   onNavigate={closeCart}
                 />

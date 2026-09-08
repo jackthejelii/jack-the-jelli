@@ -4,11 +4,11 @@ import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useCartStore } from "@/features/cart/lib/cartStore";
+import { lineLabel, useCartStore } from "@/features/cart/lib/cartStore";
 import { findProductImage, flyToCart } from "@/features/cart/lib/fly-to-cart";
 
 /**
- * What the button needs to put a line in the cart. Only `id` and `qty` are
+ * What the button needs to put a line in the cart. Only the ids and `qty` are
  * ever authoritative — the rest is snapshotted so the sheet can render
  * instantly, and every figure is recomputed server-side at placement.
  */
@@ -17,12 +17,24 @@ export interface AddToCartProduct {
   slug: string;
   name: string;
   price: number;
-  thumbnail?: string;
+}
+
+/**
+ * The colourway being added. Separate from the product because it is the half
+ * that changes as the shopper clicks a swatch — and because stock, and so
+ * whether this button is even usable, lives here rather than on the product.
+ */
+export interface AddToCartColorway {
+  id: string;
+  color: string;
+  hex: string;
   stock: number;
+  thumbnail?: string;
 }
 
 interface AddToCartButtonProps {
   product: AddToCartProduct;
+  colorway: AddToCartColorway;
   /** "detail" is the full-width primary CTA; "card" is the compact grid variant. */
   variant?: "card" | "detail";
   className?: string;
@@ -30,6 +42,7 @@ interface AddToCartButtonProps {
 
 export default function AddToCartButton({
   product,
+  colorway,
   variant = "card",
   className,
 }: AddToCartButtonProps) {
@@ -37,7 +50,9 @@ export default function AddToCartButton({
   const openCart = useCartStore((state) => state.openCart);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const soldOut = product.stock <= 0;
+  // Stock is per colourway, so "sold out" is a statement about the selected
+  // colour — a product with a sold-out black and a stocked tan is not sold out.
+  const soldOut = colorway.stock <= 0;
 
   const handleClick = () => {
     // Read the image and start the flight before the store update, so the
@@ -46,18 +61,23 @@ export default function AddToCartButton({
 
     addItem({
       productId: product.id,
+      variantId: colorway.id,
       slug: product.slug,
       name: product.name,
+      color: colorway.color,
+      hex: colorway.hex,
       price: product.price,
-      thumbnail: product.thumbnail,
-      maxQty: product.stock,
+      thumbnail: colorway.thumbnail,
+      maxQty: colorway.stock,
     });
     // The toast is the whole confirmation. Opening the sheet here used to be,
     // but it interrupts the common case — adding several pieces from the grid
     // — by covering the grid after every click. The sheet is offered instead,
     // and stays something the shopper opens.
     toast("Added to your cart.", {
-      description: product.name,
+      // Names the colour: adding the tan wallet right after the black one must
+      // not produce two identical toasts.
+      description: lineLabel({ name: product.name, color: colorway.color }),
       action: { label: "View cart", onClick: openCart },
     });
   };

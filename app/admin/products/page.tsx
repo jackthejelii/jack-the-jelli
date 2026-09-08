@@ -17,6 +17,7 @@ import ProductPagination from "@/features/admin/components/ProductPagination";
 import StockIndicator from "@/features/admin/components/StockIndicator";
 import { getProducts } from "@/features/admin/lib/products";
 import type { StockStatus } from "@/features/products/lib/stock";
+import { totalStock } from "@/features/products/lib/variants";
 
 export const dynamic = "force-dynamic";
 
@@ -117,22 +118,49 @@ export default async function AdminInventory({
                   <div className="flex items-center gap-4">
                     <div className="bg-accent relative size-16 shrink-0 overflow-hidden rounded-none">
                       <Image
-                        src={product.thumbnail || "/image-placeholder.jpg"}
+                        // The first colourway's first photograph — there is no
+                        // product-level image any more.
+                        src={
+                          product.variants[0]?.images[0]?.url ||
+                          "/image-placeholder.jpg"
+                        }
                         alt={product.name}
                         fill
                         sizes="4rem"
                         className="object-cover"
                       />
                     </div>
-                    <span className="font-heading text-foreground text-base">
-                      {product.name}
-                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="font-heading text-foreground text-base">
+                        {product.name}
+                      </span>
+                      {product.variants.length > 1 && (
+                        <span className="flex items-center gap-1">
+                          {product.variants.map((colorway) => (
+                            <span
+                              key={colorway.id}
+                              title={`${colorway.color} — ${colorway.stock} in stock`}
+                              className="border-border size-3 shrink-0 border"
+                              style={{ backgroundColor: colorway.hex }}
+                            />
+                          ))}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="py-8">
+                  {/* One row per product, so a multi-colour piece shows its
+                      first SKU and says how many more there are rather than
+                      pretending it has only one. */}
                   <span className="text-foreground font-mono text-sm tracking-wide">
-                    {product.sku}
+                    {product.variants[0]?.sku ?? "—"}
                   </span>
+                  {product.variants.length > 1 && (
+                    <span className="text-muted-foreground mt-1 block text-xs tracking-widest uppercase">
+                      +{product.variants.length - 1} more
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="py-8">
                   <span className="text-foreground text-sm">
@@ -149,7 +177,10 @@ export default async function AdminInventory({
                   </span>
                 </TableCell>
                 <TableCell className="py-8">
-                  <StockIndicator count={product.stock} />
+                  {/* Summed across colourways — a piece is out of stock only
+                      when every colour is. The per-colour counts sit in the
+                      swatch tooltips beside the name, and in the editor. */}
+                  <StockIndicator count={totalStock(product.variants)} />
                 </TableCell>
                 <TableCell className="py-8">
                   <span

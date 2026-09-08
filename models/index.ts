@@ -14,5 +14,10 @@ export type {
   IOrderStatusEntry,
   IShippingAddress,
 } from "./Order";
-export type { IProduct, IProductImage, ProductStatus } from "./Product";
+export type {
+  IProduct,
+  IProductImage,
+  IProductVariant,
+  ProductStatus,
+} from "./Product";
 export { PRODUCT_STATUSES } from "./Product";

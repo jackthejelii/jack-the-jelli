@@ -30,8 +30,11 @@ function duplicateKeyErrors(error: unknown): Record<string, string> | null {
 
   const errors: Record<string, string> = {};
   for (const field of fields) {
-    if (field === "sku") {
-      errors.sku = "That SKU is already in use";
+    // The unique index moved onto the colourway with the field it guards, so
+    // the E11000 now names "variants.sku". Reported under `variants`, which is
+    // where the whole colour editor hangs its one error message.
+    if (field === "variants.sku" || field === "sku") {
+      errors.variants = "That SKU is already in use by another product";
     } else if (field === "slug") {
       // The slug is derived from the name, so surface it on the name input.
       errors.name = "A product with this name already exists";
@@ -61,7 +64,7 @@ async function deleteDetachedImages(previous: string[], next: string[]) {
       try {
         // Defensive: never pull an asset another product still points at.
         const stillReferenced = await Product.countDocuments({
-          "images.publicId": publicId,
+          "variants.images.publicId": publicId,
         });
         if (stillReferenced > 0) return;
 
@@ -109,14 +112,16 @@ export async function validateProductDraft(
   try {
     await connectDB();
 
+    // Every colourway's SKU at once — one query rather than one per colour,
+    // and the same check the unique index would make at save time.
     const skuTaken = await Product.exists({
-      sku: parsed.data.sku,
+      "variants.sku": { $in: parsed.data.variants.map((v) => v.sku) },
       ...(currentId ? { _id: { $ne: currentId } } : {}),
     });
     if (skuTaken) {
       return {
         ok: false,
-        errors: { sku: "That SKU is already in use" },
+        errors: { variants: "That SKU is already in use by another product" },
         message: "Please correct the highlighted fields.",
       };
     }
@@ -185,32 +190,28 @@ export async function createProduct(
     };
   }
 
-  const {
-    name,
-    sku,
-    category,
-    price,
-    stock,
-    description,
-    images,
-    featured,
-    intent,
-  } = parsed.data;
+  const { name, category, price, description, variants, featured, intent } =
+    parsed.data;
 
   try {
     await connectDB();
     // The slug is derived and de-duplicated by the model's pre("validate") hook.
     await Product.create({
       name,
-      sku,
       category: new Types.ObjectId(category),
       price,
-      stock,
       description,
       status: intent === "publish" ? "Published" : "Draft",
       featured,
-      images,
-      thumbnail: images[0]?.url,
+      // Every colourway is new here, so none carries an id — Mongoose mints one
+      // per subdocument, and those are what carts and orders will address.
+      variants: variants.map((variant) => ({
+        color: variant.color,
+        hex: variant.hex,
+        sku: variant.sku,
+        stock: variant.stock,
+        images: variant.images,
+      })),
     });
   } catch (error) {
     const duplicates = duplicateKeyErrors(error);
@@ -257,21 +258,12 @@ export async function updateProduct(
     };
   }
 
-  const {
-    id,
-    name,
-    sku,
-    category,
-    price,
-    stock,
-    description,
-    images,
-    featured,
-    intent,
-  } = parsed.data;
+  const { id, name, category, price, description, variants, featured, intent } =
+    parsed.data;
 
-  // Captured before the images are replaced, so the cleanup below knows what
-  // was dropped.
+  // Captured before the colourways are replaced, so the cleanup below knows
+  // what was dropped — including every photo of a colour that was removed
+  // outright.
   let previousImageIds: string[] = [];
 
   try {
@@ -281,19 +273,31 @@ export async function updateProduct(
       return { ok: false, values, message: "That product no longer exists." };
     }
 
-    previousImageIds = product.images.map((image) => image.publicId);
+    previousImageIds = product.variants.flatMap((variant) =>
+      variant.images.map((image) => image.publicId),
+    );
 
     product.name = name;
-    product.sku = sku;
     product.category = new Types.ObjectId(category);
     product.price = price;
-    product.stock = stock;
     product.description = description;
     // Same intent switch as create (D4), so this is also how a draft ships.
     product.status = intent === "publish" ? "Published" : "Draft";
     product.featured = featured;
-    product.images = images;
-    product.thumbnail = images[0]?.url;
+    // An existing colourway keeps its `_id`, which is what every cart line and
+    // every past order line addresses. Minting fresh ids on each save would
+    // orphan live carts and leave cancelled orders with nowhere to put their
+    // stock back — see restoreStock in features/admin/lib/order-actions.ts.
+    product.variants = variants.map((variant) => ({
+      ...(variant.id ? { _id: new Types.ObjectId(variant.id) } : {}),
+      color: variant.color,
+      hex: variant.hex,
+      sku: variant.sku,
+      stock: variant.stock,
+      images: variant.images,
+      // Mongoose mints `_id` for the entries that arrived without one, so the
+      // input is legitimately narrower than the stored subdocument type.
+    })) as unknown as typeof product.variants;
     // save() rather than findByIdAndUpdate so the slug hook runs on a rename.
     await product.save();
   } catch (error) {
@@ -318,7 +322,9 @@ export async function updateProduct(
   // Only reached when the save succeeded — every catch branch above returns.
   await deleteDetachedImages(
     previousImageIds,
-    images.map((image) => image.publicId),
+    variants.flatMap((variant) =>
+      variant.images.map((image) => image.publicId),
+    ),
   );
 
   revalidatePath("/admin/products");

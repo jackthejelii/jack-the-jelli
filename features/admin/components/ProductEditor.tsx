@@ -27,9 +27,9 @@ import type { ProductDTO } from "@/features/admin/lib/types";
 import { useDirtyGuard } from "@/features/admin/hooks/useDirtyGuard";
 import { useProductSubmit } from "@/features/admin/hooks/useProductSubmit";
 import ProductDetailsForm from "@/features/admin/components/ProductDetailsForm";
-import ProductMediaUploader, {
-  type ProductMediaUploaderHandle,
-} from "@/features/admin/components/ProductMediaUploader";
+import VariantEditor, {
+  type VariantEditorHandle,
+} from "@/features/admin/components/VariantEditor";
 import { emptyFormState } from "@/features/admin/lib/form-state";
 import {
   archiveProduct,
@@ -51,13 +51,13 @@ export default function ProductEditor({
     updateProduct,
     emptyFormState,
   );
-  const uploaderRef = useRef<ProductMediaUploaderHandle>(null);
+  const variantsRef = useRef<VariantEditorHandle>(null);
   const { markDirty, clearDirty } = useDirtyGuard();
 
   // A successful save redirects server-side, so the guard stands down as the
   // submit starts; any later edit re-marks it via onChange.
   const { handleSubmit, isUploading, errors } = useProductSubmit({
-    uploaderRef,
+    variantsRef,
     formAction,
     state,
     schema: updateProductSchema,
@@ -234,26 +234,12 @@ export default function ProductEditor({
         )}
       </header>
 
-      {/* Content */}
-      <main className="bg-surface flex flex-1 flex-col md:flex-row">
-        <div className="w-full px-4 py-8 md:w-2/5 md:px-16 md:py-12">
-          <div className="mb-8">
-            <h3 className="font-heading text-foreground text-2xl">
-              Product Media
-            </h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              High-fidelity imagery reflecting the quiet luxury aesthetic.
-            </p>
-          </div>
-          {/* Seeded with the saved images so a save never wipes the gallery. */}
-          <ProductMediaUploader
-            ref={uploaderRef}
-            initialImages={product.images}
-            onChange={markDirty}
-          />
-        </div>
-
-        <div className="bg-muted/40 w-full md:w-3/5">
+      {/* Content. Stacked rather than the old two-column split: photographs
+          are no longer one product-level gallery that can sit in a narrow
+          sidebar — there is a set per colourway, and the colour editor needs
+          the full width to show them. */}
+      <main className="bg-surface flex flex-1 flex-col">
+        <div className="bg-muted/40 w-full">
           <div className="max-w-2xl px-6 py-12 md:px-16">
             <ProductDetailsForm
               product={product}
@@ -263,6 +249,25 @@ export default function ProductEditor({
               onDirty={markDirty}
             />
           </div>
+        </div>
+
+        <div className="w-full px-4 py-12 md:px-16">
+          <div className="mb-8">
+            <h3 className="font-heading text-foreground text-2xl">
+              Colours &amp; Inventory
+            </h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Each colourway carries its own SKU, stock count and photographs.
+            </p>
+          </div>
+          {/* Seeded with the saved colourways so a save never wipes them. */}
+          <VariantEditor
+            ref={variantsRef}
+            initialVariants={product.variants}
+            echoedValue={state.values?.variants}
+            error={errors?.variants}
+            onDirty={markDirty}
+          />
         </div>
       </main>
     </form>

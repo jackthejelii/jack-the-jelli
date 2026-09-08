@@ -3,8 +3,13 @@
 import Image from "next/image";
 import AppLink from "@/components/layout/AppLink";
 import { Minus, Plus, X } from "lucide-react";
-import { useCartStore, type CartItem } from "@/features/cart/lib/cartStore";
+import {
+  lineLabel,
+  useCartStore,
+  type CartItem,
+} from "@/features/cart/lib/cartStore";
 import { MAX_LINE_QTY } from "@/features/cart/lib/limits";
+import { lineKey } from "@/features/cart/lib/types";
 import { formatPrice } from "@/features/products/lib/format";
 
 /**
@@ -27,6 +32,13 @@ export default function CartLine({
   // trusts the global ceiling rather than blocking the customer.
   const ceiling = Math.min(line.maxQty ?? MAX_LINE_QTY, MAX_LINE_QTY);
   const soldOut = line.maxQty === 0;
+
+  // The line is addressed by the (product, colour) pair everywhere — passing a
+  // bare product id here would move both colourways of a piece at once.
+  const key = lineKey(line);
+  // Every announcement names the colour too, or a shopper holding two of the
+  // same wallet hears "Remove ABC Bifold" twice with no way to tell them apart.
+  const label = lineLabel(line);
 
   return (
     <li
@@ -61,13 +73,27 @@ export default function CartLine({
           </AppLink>
           <button
             type="button"
-            onClick={() => removeItem(line.productId)}
-            aria-label={`Remove ${line.name} from cart`}
+            onClick={() => removeItem(key)}
+            aria-label={`Remove ${label} from cart`}
             className="text-on-surface-variant hover:text-foreground -m-1.5 shrink-0 p-1.5 transition-colors duration-300"
           >
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
+
+        {/* The swatch is decorative — the colour is spelled out beside it, so
+            the line never depends on a shopper telling black from navy in a
+            10px square. */}
+        {line.color && (
+          <p className="text-on-surface-variant mt-1 flex items-center gap-1.5 text-[12px] tracking-wide">
+            <span
+              aria-hidden="true"
+              className="border-outline-variant/50 size-2.5 shrink-0 border"
+              style={{ backgroundColor: line.hex }}
+            />
+            {line.color}
+          </p>
+        )}
 
         <p className="text-on-surface-variant mt-1 text-[13px]">
           {formatPrice(line.price)}
@@ -82,8 +108,8 @@ export default function CartLine({
             <div className="border-outline-variant/40 inline-flex items-center border">
               <button
                 type="button"
-                onClick={() => setQty(line.productId, line.qty - 1)}
-                aria-label={`Decrease quantity of ${line.name}`}
+                onClick={() => setQty(key, line.qty - 1)}
+                aria-label={`Decrease quantity of ${label}`}
                 className="text-foreground hover:bg-surface-container px-2.5 py-1.5 transition-colors duration-300"
               >
                 <Minus className="size-3.5" aria-hidden="true" />
@@ -96,9 +122,9 @@ export default function CartLine({
               </span>
               <button
                 type="button"
-                onClick={() => setQty(line.productId, line.qty + 1)}
+                onClick={() => setQty(key, line.qty + 1)}
                 disabled={line.qty >= ceiling}
-                aria-label={`Increase quantity of ${line.name}`}
+                aria-label={`Increase quantity of ${label}`}
                 className="text-foreground hover:bg-surface-container px-2.5 py-1.5 transition-colors duration-300 disabled:pointer-events-none disabled:opacity-30"
               >
                 <Plus className="size-3.5" aria-hidden="true" />

@@ -17,7 +17,11 @@ import type { DeliveryZone } from "@/features/checkout/lib/delivery";
 export interface OrderItemDTO {
   /** Provenance only. Nothing on an order screen renders from the live product. */
   productId: string;
+  /** Which colourway — what a cancel restores stock to. Not rendered. */
+  variantId: string;
   name: string;
+  /** The colour as it was named at purchase. Snapshotted, like every field here. */
+  color: string;
   sku: string;
   slug: string;
   price: number;

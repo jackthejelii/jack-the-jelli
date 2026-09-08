@@ -27,23 +27,43 @@ export type { IProductImage, ProductStatus };
  * the server/client boundary (§6.3) — `_id` and `Date` both break — so every
  * query maps through `toProductDTO` in features/admin/lib/products.ts.
  */
+/**
+ * One colourway, as the admin forms and table see it.
+ *
+ * `id` is empty for a row the admin has just added and not yet saved — the
+ * variant editor needs to render and address a colourway that has no `_id`
+ * yet, and an empty string is the one value no ObjectId can collide with.
+ */
+export interface ProductVariantDTO {
+  id: string;
+  color: string;
+  /** Six-digit hex, e.g. "#1c1b1a" — the swatch fill. */
+  hex: string;
+  sku: string;
+  stock: number;
+  images: IProductImage[];
+}
+
 export interface ProductDTO {
   id: string;
   name: string;
   slug: string;
-  sku: string;
   /** ObjectId string — what the category <Select> submits. */
   categoryId: string;
   /** Resolved via populate, for display. */
   categoryName: string;
   price: number;
   description?: string;
-  stock: number;
   status: ProductStatus;
   /** Surfaces this product in the homepage featured strip. */
   featured: boolean;
-  thumbnail?: string;
-  images: IProductImage[];
+  /**
+   * Never empty. SKU, stock and photographs all live here — see
+   * models/Product.ts. The table derives its single-line summary (a thumbnail,
+   * a SKU, a stock count) from this rather than from product-level fields,
+   * which no longer exist.
+   */
+  variants: ProductVariantDTO[];
   createdAt: string;
   updatedAt: string;
 }

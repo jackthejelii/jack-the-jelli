@@ -61,6 +61,11 @@ export default function OrderItemsPanel({
               <h3 className="font-heading text-foreground text-base">
                 {item.name}
               </h3>
+              {/* The colour is what the packing list is picked by, so it sits
+                  with the name rather than in a detail line below the price. */}
+              {item.color && (
+                <p className="text-foreground mt-0.5 text-sm">{item.color}</p>
+              )}
               <p className="text-muted-foreground mt-0.5 text-sm">
                 {formatPrice(item.price)} each
               </p>
