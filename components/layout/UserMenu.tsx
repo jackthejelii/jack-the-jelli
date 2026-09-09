@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/layout/AppLink";
-import { User } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -63,11 +63,28 @@ export default function UserMenu() {
     router.refresh();
   }
 
-  // Height only, no width: the navbar cluster is anchored to the right edge, so
-  // it grows leftward into empty space and neither branch below can displace
-  // the cart beside it. Reserving a width here would only pad that empty space.
+  // size-8 matches the avatar exactly and sits 2px inside the Login button's
+  // 34px mobile footprint, so whichever branch lands below barely moves. The
+  // navbar cluster is anchored to the right edge either way, growing leftward
+  // into empty space, so neither can displace the cart beside it.
+  //
+  // session-placeholder holds it at opacity 0 for 120ms before fading in. The
+  // session resolves in ~12ms warm, well inside that window, so an ordinary
+  // load still paints nothing at all — a spinner that flashes and leaves is
+  // worse than the bare gap it replaced. Same debounce the route indicator
+  // uses, and the reason this isn't just `animate-spin` on its own.
   if (isPending) {
-    return <div className="h-8" aria-hidden="true" />;
+    return (
+      // Not announced: this resolves in well under a second and sits in
+      // persistent chrome, so a live region here would only add noise to every
+      // page load.
+      <div
+        className="session-placeholder flex size-8 items-center justify-center"
+        aria-hidden="true"
+      >
+        <Loader2 className="text-muted-foreground size-4 animate-spin" />
+      </div>
+    );
   }
 
   if (!data) {

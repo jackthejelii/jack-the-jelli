@@ -481,6 +481,25 @@ body::-webkit-scrollbar {
   animation: cart-tick 320ms var(--motion-ease) both;
 }
 
+/* Session placeholder — components/layout/UserMenu.tsx.
+   The navbar's account control can't render until the client has resolved the
+   session, and an empty slot reads as a missing element rather than a pending
+   one. Same debounce as the route indicator: the spinner starts at opacity 0
+   and its fade-in is delayed, so a session that resolves in a few frames never
+   paints anything at all and only a slow one is announced. The wrapper owns
+   that delay and the icon inside owns the spin — one element can't carry both,
+   since the two `animation` declarations would fight over cascade order. */
+@keyframes session-placeholder-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@utility session-placeholder {
+  opacity: 0;
+  animation: session-placeholder-in 200ms ease 120ms forwards;
+}
+
 /* Skeleton is a shared primitive (components/ui/skeleton.tsx) whose
    animate-pulse doesn't respect prefers-reduced-motion on its own, and it's
    used in places a motion-safe: variant at the call site can't reach. */
@@ -496,6 +515,24 @@ body::-webkit-scrollbar {
   .route-progress-bar {
     width: 100%;
     animation: route-progress-fade-in 1ms linear 120ms forwards;
+  }
+
+  /* The placeholder itself stays, for the same reason the bar above does: it
+     is the only sign the account control is still coming. The fade collapses
+     to the bare 120ms debounce — timing, not decoration.
+
+     The spinner slows rather than stops. Frozen, animate-spin leaves a bare
+     three-quarter arc hanging in the navbar, which reads as a broken icon
+     instead of a calm one; at 3s it is still legibly turning without being
+     the fast repeating motion the preference is actually asking us to drop.
+     Nothing else in the file covers this — [data-slot="skeleton"] only
+     reaches the shared Skeleton primitive, not animate-spin. */
+  .session-placeholder {
+    animation: session-placeholder-in 1ms linear 120ms forwards;
+  }
+
+  .session-placeholder .animate-spin {
+    animation-duration: 3s;
   }
 
   .page-fade {
