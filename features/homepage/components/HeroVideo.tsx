@@ -19,20 +19,18 @@ import { cn } from "@/lib/utils";
  *    product grid for no gain, since nobody can see it until it decodes
  *    anyway. It waits for `load`, then for an idle callback.
  *
- *  · Load under reduced motion. A ten-second rotation on a loop is exactly
- *    what that preference is asking us not to do, and the poster is the same
- *    footage held still. Handled the way SmoothScroll handles it — read
- *    synchronously, honour a mid-session toggle — rather than by letting it
- *    play and hiding it in CSS, which would download it regardless.
- *
  *  · Load on a metered or slow connection (`Save-Data`, 2g/3g).
+ *
+ * Reduced motion is deliberately *not* one of them. The rotation is this
+ * surface's argument rather than decoration laid over one, and playing it at
+ * every setting is an explicit product decision — see the note in the
+ * prefers-reduced-motion block in app/globals.css, which the hero is likewise
+ * absent from. Restore the gate only if that decision is revisited.
  *
  * `poster=` is deliberately absent: the next/image layer beneath is a better
  * poster in every way — AVIF, device-sized, build-time blur placeholder — and
  * setting the attribute would fetch the same frame a second time.
  */
-
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
  * Kept in step with `.hero-media` in app/globals.css, which does the matching
@@ -77,8 +75,6 @@ type ConnectionNavigator = Navigator & {
 const SLOW_CONNECTIONS = new Set(["slow-2g", "2g", "3g"]);
 
 function shouldSkipVideo() {
-  if (window.matchMedia(REDUCED_MOTION).matches) return true;
-
   const connection = (navigator as ConnectionNavigator).connection;
   if (!connection) return false;
 
@@ -119,9 +115,24 @@ export default function HeroVideo() {
     if (document.readyState === "complete") whenIdle();
     else window.addEventListener("load", whenIdle, { once: true });
 
+    // `.hero-media` re-evaluates this same query live, so reading it once here
+    // would leave the two disagreeing the moment a phone is rotated: CSS goes
+    // full-bleed while the DOM still holds the portrait encode, which then
+    // gets cover-cropped into a wide box and cuts into the wallet. The guard
+    // matters as much as the listener — a rotation must never be what *starts*
+    // the download, or the load-then-idle deferral above buys nothing.
+    const shape = window.matchMedia(WIDE);
+    const onShapeChange = (event: MediaQueryListEvent) => {
+      setOrientation((current) =>
+        current === null ? null : event.matches ? "landscape" : "portrait",
+      );
+    };
+    shape.addEventListener("change", onShapeChange);
+
     return () => {
       cancelled = true;
       window.removeEventListener("load", whenIdle);
+      shape.removeEventListener("change", onShapeChange);
     };
   }, []);
 

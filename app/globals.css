@@ -498,6 +498,105 @@ body::-webkit-scrollbar {
   animation: hero-settle 1400ms var(--motion-ease) both;
 }
 
+/* Hero veil — the ground the lockup reads against.
+
+   The hero used to carry no scrim, and the measurement behind that was sound
+   for what it covered: one filled block sitting in the bottom band, where the
+   backdrop is 8.3:1 or better. It does not survive four elements of copy. The
+   wallet opens during the rotation and reaches far lower in the frame than the
+   closed bifold does, and body text set over white and red leather fails
+   contrast outright.
+
+   So this is legibility, not decoration, and it is drawn in the footage's own
+   colour rather than the usual black wash: #d8d4ce is the exact flat the
+   clip's bottom edge rows already are, and .hero-stage already paints it below
+   the band. Fading up into that colour reads as the studio sweep deepening
+   toward the floor, not as a panel laid over the picture. On the banded
+   arrangement, where the bottom of the stage is that flat already, the veil is
+   invisible by construction.
+
+   Sits between .hero-stage and the lockup, so it grounds the copy without
+   touching the media's own settle. */
+.hero-veil {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 62%;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    #d8d4ce 0%,
+    color-mix(in srgb, #d8d4ce 88%, transparent) 34%,
+    transparent 100%
+  );
+}
+
+/* Hero lockup — the rule, headline, supporting line and control stacked over
+   the media in features/homepage/components/HeroSection.tsx.
+
+   This is the featured strip's vocabulary brought to the hero: a hairline
+   drawn left to right, display type rising out of its own edge, then the
+   quieter elements arriving behind it. The hero was the loudest surface on the
+   site running the least of the system's own devices, which is what made it
+   read as empty rather than as restrained.
+
+   Driven by CSS animations on a fixed timeline rather than by <Reveal>. Every
+   element here is above the fold on every viewport, so an IntersectionObserver
+   entrance would hold the page's only control at opacity 0 until the client
+   bundle hydrates — and on the slow connections this storefront actually
+   serves, that is precisely the moment there is nothing else on screen to
+   read. `both` supplies the hidden start state during the delay, so the
+   sequence needs no JavaScript at all and cannot outlast a stalled bundle.
+
+   --hero-delay is set per element at the call site, the way Reveal sets
+   --reveal-delay, so the running order lives with the markup it describes. */
+@keyframes hero-rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* No opacity, matching .featured-mask: the clipped edge is what makes this
+   read as type being set rather than a div fading in. */
+@keyframes hero-line-rise {
+  from {
+    transform: translate3d(0, 110%, 0);
+  }
+}
+
+@keyframes hero-fade-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-rise), 0);
+  }
+}
+
+.hero-rule {
+  transform-origin: left;
+  animation: hero-rule-draw var(--motion-reveal) var(--motion-ease)
+    var(--hero-delay, 0ms) both;
+}
+
+.hero-mask {
+  display: block;
+  overflow: hidden;
+  /* Room for descenders inside the clip, taken straight back out of the
+     layout so the mask cannot change the heading's line spacing. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.hero-mask > * {
+  display: block;
+  animation: hero-line-rise var(--motion-reveal-lg) var(--motion-ease)
+    var(--hero-delay, 0ms) both;
+}
+
+.hero-rise {
+  animation: hero-fade-rise var(--motion-reveal) var(--motion-ease)
+    var(--hero-delay, 0ms) both;
+}
+
 /* Hero call to action — features/homepage/components/HeroSection.tsx.
    The hero carries one element of copy now, so it has to read as a control
    on its own, with no headline above it to introduce it. A filled block over
@@ -673,17 +772,16 @@ body::-webkit-scrollbar {
     animation: none;
   }
 
-  /* The photograph is the content; only its arrival is decoration. */
-  .hero-settle {
-    animation: none;
-  }
+  /* The hero is deliberately absent from this block. Its motion is the
+     surface's argument rather than decoration on top of one, and it is kept at
+     full strength at every setting by an explicit product decision: the film,
+     the settle, the lockup sequence and the sheen all run. Nothing here ever
+     leaves hero content unreachable — every entrance uses `both`, so each
+     element still comes to rest visible on its own.
 
-  /* The block still has to look like a control without it — it is filled and
-     it moves on hover, which is enough. */
-  .cta-sheen::after {
-    animation: none;
-    display: none;
-  }
+     Do not fold .hero-settle, .hero-rule, .hero-mask, .hero-rise or
+     .cta-sheen back into this block without asking; their omission is the
+     decision, not an oversight. */
 
   /* The dim stays — it is the only signal that a filter is still resolving —
      it just arrives without a fade. */

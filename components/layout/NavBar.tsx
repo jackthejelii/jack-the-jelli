@@ -19,7 +19,7 @@ export default function NavBar() {
       <div className="relative mx-auto flex h-full max-w-360 items-center justify-center px-5 md:px-16">
         <AppLink
           href="/"
-          aria-label="Jack The Jelli — Home"
+          aria-label="Jack The Jelli, home"
           className="block h-10 transition-opacity hover:opacity-80 md:h-12"
         >
           {/* The link already carries the brand name. */}
