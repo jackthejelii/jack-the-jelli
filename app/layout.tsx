@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EB_Garamond, Inter } from "next/font/google";
 import "./globals.css";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import RouteProgress from "@/components/layout/RouteProgress";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -68,6 +69,12 @@ export default function RootLayout({
             storefront, the auth pages and /admin alike. */}
         <RouteProgress />
         <Toaster />
+        {/* Real-user Core Web Vitals. Renders nothing and loads its script
+            after hydration, so it costs no paint time — and it reports what
+            actual shoppers on actual Bangladeshi networks experience, which
+            is the only measurement that settles whether a change helped.
+            Inert outside Vercel, so local dev and any other host ignore it. */}
+        <SpeedInsights />
       </body>
     </html>
   );

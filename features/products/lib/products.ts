@@ -1,4 +1,4 @@
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { Types, type QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { escapeRegex } from "@/lib/slug";
@@ -7,6 +7,8 @@ import {
   CATEGORY_SUGGESTION_LIMIT,
   DEFAULT_SORT,
   FEATURED_LIMIT,
+  FEATURED_PRODUCTS_TAG,
+  PRERENDER_LIMIT,
   PRODUCTS_PER_PAGE,
   SEARCH_MIN_CHARS,
   SUGGESTION_LIMIT,
@@ -195,29 +197,59 @@ export async function getPublicProducts({
 }: PublicProductQuery): Promise<PublicProductListResult> {
   await connectDB();
 
-  const filter: QueryFilter<IProduct> = { status: "Published" };
-
   const search = q?.trim();
-  if (search) {
-    Object.assign(filter, (await matchSearch(search)).filter);
-  }
+  const slug = categorySlug?.trim();
 
-  if (categorySlug?.trim()) {
-    const categoryId = await resolveCategoryId(categorySlug);
+  // Phase 1. These two read different collections and neither needs the
+  // other's answer, so they go out together. Sequentially they were two full
+  // round trips to Atlas before the product query had even been built, which
+  // on a cross-region cluster is the difference between a fast page and a
+  // visibly slow one.
+  const [searchMatch, categoryId] = await Promise.all([
+    search ? matchSearch(search) : null,
+    slug ? resolveCategoryId(slug) : null,
+  ]);
+
+  const filter: QueryFilter<IProduct> = { status: "Published" };
+  if (searchMatch) Object.assign(filter, searchMatch.filter);
+
+  if (slug) {
     // An unknown slug matches nothing, rather than silently showing everything.
     if (!categoryId) return EMPTY_RESULT;
     filter.category = categoryId;
   }
 
-  const total = await Product.countDocuments(filter);
-  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
-  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const requestedPage = Math.max(1, page);
+  const order = SORT_MAP[sort] ?? SORT_MAP[DEFAULT_SORT];
 
-  const products = await findLeanProducts(filter, {
-    sort: SORT_MAP[sort] ?? SORT_MAP[DEFAULT_SORT],
-    skip: (currentPage - 1) * PRODUCTS_PER_PAGE,
-    limit: PRODUCTS_PER_PAGE,
-  });
+  // Phase 2. The count and the page itself also run together. The old order
+  // made the find wait on the count purely to clamp an out-of-range `page`,
+  // which costs every well-formed request a round trip to protect against a
+  // hand-edited URL. Page 1 — the only page this route renders on the server —
+  // is in range by definition, and any later page the UI can reach came from a
+  // totalPages the client was already handed.
+  const [total, requestedProducts] = await Promise.all([
+    Product.countDocuments(filter),
+    findLeanProducts(filter, {
+      sort: order,
+      skip: (requestedPage - 1) * PRODUCTS_PER_PAGE,
+      limit: PRODUCTS_PER_PAGE,
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
+  const currentPage = Math.min(requestedPage, totalPages);
+
+  // Only the overflow case pays for a second query, and it re-reads exactly
+  // what the sequential version would have fetched in the first place.
+  const products =
+    currentPage === requestedPage
+      ? requestedProducts
+      : await findLeanProducts(filter, {
+          sort: order,
+          skip: (currentPage - 1) * PRODUCTS_PER_PAGE,
+          limit: PRODUCTS_PER_PAGE,
+        });
 
   return {
     products: products.map(toPublicProduct),
@@ -321,6 +353,14 @@ export async function getProductSuggestions({
 export async function getFeaturedProducts(
   limit: number = FEATURED_LIMIT,
 ): Promise<PublicProduct[]> {
+  "use cache";
+  // Keeps the homepage a fully prerendered page under Cache Components. Without
+  // this the single query below would make `/` dynamic — a database round trip
+  // on the most-visited route on the site, for data that changes when an admin
+  // ticks a checkbox.
+  cacheTag(FEATURED_PRODUCTS_TAG);
+  cacheLife("days");
+
   await connectDB();
 
   const products = await findLeanProducts(
@@ -383,24 +423,78 @@ export async function getRelatedProducts({
  * Looks up a single product for the storefront detail page. Filters on
  * Published so a Draft or Archived slug 404s instead of leaking.
  *
- * Wrapped in React's `cache` because both `generateMetadata` and the page body
- * need it — Next dedupes `fetch`, but not arbitrary async functions, so without
- * this every product view costs two identical round trips.
+ * Cached rather than wrapped in React's `cache`. The old wrapper existed
+ * because both `generateMetadata` and the page body call this, and Next
+ * dedupes `fetch` but not arbitrary async functions — two identical round
+ * trips per product view otherwise. `use cache` subsumes that: it dedupes
+ * within a render *and* across requests, which React's `cache` never did.
+ *
+ * It is also what makes the route prerenderable at all. Mongoose stamps
+ * `new Date()` internally, and reading the clock in a Server Component before
+ * any uncached data is not allowed under Cache Components — `generateMetadata`
+ * is a separate entry point, so the page's own `use cache` does not cover it.
+ *
+ * The lifetime matches the page body's deliberately: metadata and content
+ * going stale at different rates would let a shared link show one title while
+ * the page rendered another.
  */
-export const getPublicProductBySlug = cache(
-  async (slug: string): Promise<ProductDetail | null> => {
-    const normalised = slug.trim().toLowerCase();
-    if (!normalised) return null;
+export async function getPublicProductBySlug(
+  slug: string,
+): Promise<ProductDetail | null> {
+  "use cache";
+  cacheLife({ stale: 300, revalidate: 300, expire: 60 * 60 * 24 * 365 });
 
+  const normalised = slug.trim().toLowerCase();
+  if (!normalised) return null;
+
+  await connectDB();
+
+  const product = await Product.findOne({
+    slug: normalised,
+    status: "Published",
+  })
+    .populate<{ category: PopulatedCategory }>("category", "name")
+    .lean<LeanProduct | null>();
+
+  return product ? toProductDetail(product) : null;
+}
+
+/**
+ * Slugs to prerender at build time, newest first.
+ *
+ * The product route used to hand back an empty array so the build never needed
+ * a database — but the homepage already queries `getFeaturedProducts` during
+ * prerender, so that property was spent before this was reached. What it cost
+ * was real: with nothing prebuilt, the first visitor to *every* product paid a
+ * cold render plus a round trip to Atlas, and on a catalogue this size that is
+ * most visitors.
+ *
+ * Bounded rather than exhaustive. Prerendering the whole catalogue would make
+ * build time grow with the shop, and `dynamicParams` is left at its default so
+ * anything past this limit still renders on first request and is cached from
+ * then on — the same behaviour every product had before, now only for the tail.
+ *
+ * Fails soft on purpose. A build should not break because the cluster was
+ * asleep; returning nothing degrades to exactly the old on-demand behaviour.
+ */
+export async function getPrebuildableProductSlugs(
+  limit: number = PRERENDER_LIMIT,
+): Promise<string[]> {
+  try {
     await connectDB();
 
-    const product = await Product.findOne({
-      slug: normalised,
-      status: "Published",
-    })
-      .populate<{ category: PopulatedCategory }>("category", "name")
-      .lean<LeanProduct | null>();
+    const products = await Product.find({ status: "Published" })
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit)
+      .select("slug")
+      .lean<{ slug: string }[]>();
 
-    return product ? toProductDetail(product) : null;
-  },
-);
+    return products.map((product) => product.slug);
+  } catch (error) {
+    console.warn(
+      "[products] Could not read slugs to prerender; every product will render on demand instead.",
+      error,
+    );
+    return [];
+  }
+}

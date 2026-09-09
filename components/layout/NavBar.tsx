@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AppLink from "@/components/layout/AppLink";
 import Logo from "@/components/layout/Logo";
 import UserMenu from "@/components/layout/UserMenu";
@@ -27,18 +28,32 @@ export default function NavBar() {
 
         <div className="absolute right-5 flex items-center gap-4 md:right-16 md:gap-6">
           <UserMenu />
-          <CartButton />
+          {/* The cart lives in a localStorage-backed store, so it is browser
+              state by definition and can never be part of a prerendered shell.
+              Under Cache Components that has to be said out loud: without this
+              boundary the whole nav — and with it every page that renders it —
+              is held back from prerendering. The fallback reserves the
+              button's exact footprint so the bar doesn't reflow when the real
+              count arrives. */}
+          <Suspense fallback={<div className="size-6" aria-hidden />}>
+            <CartButton />
+          </Suspense>
         </div>
       </div>
 
       {/* Mounted here rather than per page so the sheet's open state and its
-          revalidation survive client navigations. */}
-      <CartSheet />
+          revalidation survive client navigations. Closed, it renders nothing,
+          so it needs no placeholder. */}
+      <Suspense fallback={null}>
+        <CartSheet />
+      </Suspense>
 
       {/* Renders nothing. Here for the same reason: the cart has to be checked
           against the live session on every route, not just the ones that
           happen to show it. */}
-      <CartSessionSync />
+      <Suspense fallback={null}>
+        <CartSessionSync />
+      </Suspense>
     </nav>
   );
 }

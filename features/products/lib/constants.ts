@@ -70,3 +70,18 @@ export function toPageNumber(value: unknown): number {
       : Number.parseInt(String(value ?? ""), 10);
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
+
+/**
+ * How many product pages are prerendered at build time (newest first).
+ * Everything past this still renders on first request and is cached from then
+ * on, so this trades build time for the cold-render cost of the long tail.
+ */
+export const PRERENDER_LIMIT = 24;
+
+/**
+ * Cache tag for the homepage featured strip. It exists because the strip is a
+ * `use cache` component on an otherwise fully static page: without a tag to
+ * invalidate, flagging a piece as featured in the admin would not show up on
+ * the front page until the cache aged out on its own.
+ */
+export const FEATURED_PRODUCTS_TAG = "featured-products";

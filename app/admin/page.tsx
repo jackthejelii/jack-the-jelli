@@ -6,8 +6,6 @@ import { getOrders } from "@/features/admin/lib/orders";
 import { ADMIN_SETTABLE_STATUSES } from "@/features/orders/lib/order-status";
 import type { AdminSettableStatus } from "@/features/admin/lib/types";
 
-export const dynamic = "force-dynamic";
-
 interface AdminOrdersProps {
   searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }

@@ -18,8 +18,6 @@ import { formatBdPhone, normalizeBdPhone } from "@/features/orders/lib/phone";
 import { formatPrice } from "@/features/products/lib/format";
 import { requireAdmin } from "@/lib/auth-guard";
 
-export const dynamic = "force-dynamic";
-
 const TABLE_HEADERS = [
   "Customer",
   "Contact",

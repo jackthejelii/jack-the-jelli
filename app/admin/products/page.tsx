@@ -19,8 +19,6 @@ import { getProducts } from "@/features/admin/lib/products";
 import type { StockStatus } from "@/features/products/lib/stock";
 import { totalStock } from "@/features/products/lib/variants";
 
-export const dynamic = "force-dynamic";
-
 const STOCK_FILTERS: StockStatus[] = ["in-stock", "low-stock", "out-of-stock"];
 
 interface AdminInventoryProps {

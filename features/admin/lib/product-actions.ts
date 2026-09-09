@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { Types } from "mongoose";
+import { FEATURED_PRODUCTS_TAG } from "@/features/products/lib/constants";
 import { requireAdmin } from "@/lib/auth-guard";
 import { CLOUDINARY_UPLOAD_FOLDER, deleteImage } from "@/lib/cloudinary";
 import { connectDB } from "@/lib/db";
@@ -236,6 +237,7 @@ export async function createProduct(
   // The homepage renders the featured strip, so it goes stale on any change to
   // what is featured, published, named or priced — not just on the flag.
   revalidatePath("/");
+  revalidateTag(FEATURED_PRODUCTS_TAG, "max");
   // redirect() throws by design — it must stay outside the try/catch (§6.6).
   redirect("/admin/products");
 }
@@ -330,6 +332,7 @@ export async function updateProduct(
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}`);
   revalidatePath("/");
+  revalidateTag(FEATURED_PRODUCTS_TAG, "max");
   redirect("/admin/products");
 }
 
@@ -382,6 +385,7 @@ export async function setProductFeatured(
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${parsed.data.id}`);
   revalidatePath("/");
+  revalidateTag(FEATURED_PRODUCTS_TAG, "max");
   return {
     ok: true,
     message: parsed.data.featured
@@ -428,6 +432,7 @@ export async function archiveProduct(
   revalidatePath(`/admin/products/${parsed.data.id}`);
   // A featured product that leaves Published has to leave the homepage too.
   revalidatePath("/");
+  revalidateTag(FEATURED_PRODUCTS_TAG, "max");
   return { ok: true, message: "Product archived." };
 }
 
@@ -467,5 +472,6 @@ export async function restoreProduct(
   revalidatePath(`/admin/products/${parsed.data.id}`);
   // A featured product that leaves Published has to leave the homepage too.
   revalidatePath("/");
+  revalidateTag(FEATURED_PRODUCTS_TAG, "max");
   return { ok: true, message: "Product restored to Draft." };
 }

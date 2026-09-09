@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Phone } from "lucide-react";
@@ -9,8 +10,6 @@ import OrderPanel from "@/features/admin/components/OrderPanel";
 import OrderStatusControls from "@/features/admin/components/OrderStatusControls";
 import { getOrderByNumber } from "@/features/admin/lib/orders";
 import { ORDER_STATUS_COPY } from "@/features/orders/lib/order-status";
-
-export const dynamic = "force-dynamic";
 
 /**
  * A Server Component on real data — the mock array and the `setTimeout` "save"
@@ -27,6 +26,13 @@ export default async function AdminOrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // Admin data is never baked into a build. These pages read no cookies,
+  // headers or searchParams of their own, so without this Next would try to
+  // prerender them and fail on the clock read inside Mongoose. connection()
+  // is what `export const dynamic = "force-dynamic"` used to say, in the form
+  // Cache Components accepts.
+  await connection();
+
   const { id } = await params;
   const order = await getOrderByNumber(id);
   if (!order) notFound();

@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "analyze": "next experimental-analyze"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "better-auth": "^1.6.25",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.10.0",
