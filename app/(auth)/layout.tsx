@@ -19,7 +19,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex-1 lg:grid lg:h-dvh lg:grid-cols-2">
-      <div className="border-border relative hidden overflow-hidden bg-[#f5f1e5] lg:flex lg:flex-col lg:items-center lg:justify-center lg:border-r">
+      <div className="border-border bg-background relative hidden overflow-hidden lg:flex lg:flex-col lg:items-center lg:justify-center lg:border-r">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.04)_100%)]"

@@ -60,18 +60,18 @@
 
 :root {
   /* Quiet Luxury Palette Mapped to Shadcn */
-  --background: #f9f8f6; /* Neutral */
+  --background: #faf9f6; /* Neutral */
   --foreground: #1a1a1a; /* Primary */
-  --card: #f9f8f6;
+  --card: #faf9f6;
   --card-foreground: #1a1a1a;
-  --popover: #f9f8f6;
+  --popover: #faf9f6;
   --popover-foreground: #1a1a1a;
 
   --primary: #1a1a1a; /* Primary */
-  --primary-foreground: #f9f8f6; /* Neutral */
+  --primary-foreground: #faf9f6; /* Neutral */
 
   --secondary: #8a7968; /* Secondary */
-  --secondary-foreground: #f9f8f6;
+  --secondary-foreground: #faf9f6;
 
   --muted: #f3f1ed; /* Tertiary */
   --muted-foreground: #8a7968; /* Secondary makes an elegant muted text */
@@ -87,9 +87,9 @@
   --ring: #8a7968; /* Secondary */
 
   /* Design tokens */
-  --surface-container: #efeeec;
-  --surface-container-low: #f4f3f1;
-  --surface-container-highest: #e3e2e0;
+  --surface-container: #faf9f6;
+  --surface-container-low: #faf9f6;
+  --surface-container-highest: #faf9f6;
   --on-surface-variant: #444748;
   --outline-variant: #c4c7c7;
 
