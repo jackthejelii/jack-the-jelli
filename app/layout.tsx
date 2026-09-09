@@ -3,6 +3,7 @@ import { EB_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import RouteProgress from "@/components/layout/RouteProgress";
+import SmoothScroll from "@/components/layout/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
 
 const garamond = EB_Garamond({
@@ -56,11 +57,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      data-scroll-behavior="smooth"
-      className={`${garamond.variable} ${inter.variable} h-full scroll-smooth`}
-    >
+    <html lang="en" className={`${garamond.variable} ${inter.variable} h-full`}>
       <body className="text-primary m-0 flex min-h-full flex-col font-(--font-inter) antialiased">
         {/* Storefront chrome (nav + footer) lives in app/(storefront)/layout.tsx
             so /admin opts out by route rather than by a pathname check. */}
@@ -68,6 +65,9 @@ export default function RootLayout({
         {/* Mounted at the root, above every route group, so one bar serves the
             storefront, the auth pages and /admin alike. */}
         <RouteProgress />
+        {/* Lenis smooth scroll. Renders nothing and binds to the window, so it
+            covers every route group; opts out entirely under reduced motion. */}
+        <SmoothScroll />
         <Toaster />
         {/* Real-user Core Web Vitals. Renders nothing and loads its script
             after hydration, so it costs no paint time — and it reports what

@@ -163,6 +163,25 @@
   }
 }
 
+/* Scrolling is driven by Lenis (components/layout/SmoothScroll.tsx) and the
+   native scrollbar is hidden to match. Firefox honours scrollbar-width; Blink
+   and WebKit need the pseudo-element. Both elements are listed because the
+   scrollbar is propagated from <body> to the viewport, and which one owns it
+   differs across engines.
+
+   The page still scrolls natively — nothing is set to overflow:hidden — so
+   keyboard, trackpad and reduced-motion users keep normal scrolling with only
+   the indicator gone. */
+html,
+body {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 /* react-remove-scroll (Radix Select/Dialog/Sheet) hides the page scrollbar
    while an overlay is open, widening the viewport by the scrollbar's width.
    It compensates normal-flow content via margin-right on <body>, but
