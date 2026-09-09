@@ -423,14 +423,68 @@ body::-webkit-scrollbar {
   transition: transform var(--motion-quick) var(--motion-ease);
 }
 
-/* Hero arrival — features/homepage/components/HeroSection.tsx.
-   The image lands slightly oversized and settles to true scale, so the first
+/* Hero media — features/homepage/components/HeroSection.tsx.
+
+   Two arrangements, chosen by the viewport's *shape* rather than its width,
+   because what is actually being decided is whether a cover-crop still
+   contains the product. The wallet spans 20.0%-79.7% of the clip's width
+   (measured by edge-detecting all 240 frames; it is centred to within 2px),
+   and a 5:4 viewport shows the middle 70% of the frame — so at 5:4 it just
+   survives. Anything taller would cut into it, so below that the media stops
+   filling the frame and sits in a band at its own 11:9 aspect instead.
+
+   The narrowest centred crop that keeps the whole wallet is 768 of 1280px,
+   which is 1.067:1 — barely portrait. That is why there is no 9:16 encode:
+   this subject cannot be cropped to a phone's shape, only framed within it.
+
+   `HeroVideo.tsx` matches on the same query to pick its source; the two have
+   to agree. */
+.hero-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* The clip's own backdrop, sampled from its top and bottom edge rows. Both
+     are uniform across the width to within 17/255 and stable to ±1 over the
+     whole clip, so these two flats continue the studio sweep above and below
+     the band without a seam. The 50% switch is always covered by the media,
+     which is centred, so it is never itself visible.
+
+     Hard-coded rather than themed: this is the footage's own colour, and the
+     footage does not change in dark mode. */
+  background: linear-gradient(to bottom, #a49c91 0 50%, #d8d4ce 50% 100%);
+}
+
+/* Banded — the clip's own aspect, full width. */
+.hero-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 11 / 9;
+}
+
+/* Full-bleed. */
+@media (min-aspect-ratio: 5/4) {
+  .hero-media {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    aspect-ratio: auto;
+  }
+}
+
+/* Hero arrival.
+   The media lands slightly oversized and settles to true scale, so the first
    thing on the page is already in motion when it is read. Replaces a 10s
    hover-driven zoom that only played if a cursor happened to rest on the hero
    and reversed the moment it left. One pass, on load, then still: this is an
    arrival, not an ambient effect. Longer than --motion-reveal on purpose — it
-   is a full-bleed photograph, and at 420ms a viewport-sized element reads as a
-   lurch. */
+   is a full-bleed element, and at 420ms something viewport-sized reads as a
+   lurch.
+
+   Applied to the media wrapper rather than to the poster, so the poster and
+   the video it fades into settle as one object. */
 @keyframes hero-settle {
   from {
     transform: scale(1.06);
@@ -442,6 +496,47 @@ body::-webkit-scrollbar {
 
 @utility hero-settle {
   animation: hero-settle 1400ms var(--motion-ease) both;
+}
+
+/* Hero call to action — features/homepage/components/HeroSection.tsx.
+   The hero carries one element of copy now, so it has to read as a control
+   on its own, with no headline above it to introduce it. A filled block over
+   a light backdrop does most of that (the footage measures 8.3:1 or better
+   behind it, worst frame of the rotation), and this does the rest: a single
+   band of light crossing the face, the way it would cross a polished surface
+   in the same studio the clip was shot in.
+
+   Held off for most of the cycle rather than sweeping continuously — the
+   pause is what stops it reading as a loading bar. The gradient is angled
+   past the element on both sides so neither edge of the band is ever visible
+   parked at rest. */
+@keyframes cta-sheen {
+  0%,
+  62% {
+    transform: translateX(-170%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(170%) skewX(-18deg);
+  }
+}
+
+.cta-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-background) 42%, transparent) 50%,
+    transparent 70%
+  );
+  animation: cta-sheen 4600ms var(--motion-ease) infinite;
 }
 
 /* Filtering feedback — features/products/components/CollectionGrid.tsx.
@@ -581,6 +676,13 @@ body::-webkit-scrollbar {
   /* The photograph is the content; only its arrival is decoration. */
   .hero-settle {
     animation: none;
+  }
+
+  /* The block still has to look like a control without it — it is filled and
+     it moves on hover, which is enough. */
+  .cta-sheen::after {
+    animation: none;
+    display: none;
   }
 
   /* The dim stays — it is the only signal that a filter is still resolving —

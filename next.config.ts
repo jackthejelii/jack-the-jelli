@@ -47,6 +47,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        /**
+         * The hero clip and its poster. Next only applies its own
+         * `immutable` caching to the SHA-named files under `_next/static`;
+         * anything served straight out of `public/` gets revalidated on every
+         * visit unless told otherwise, which for a ~500 KB video on the
+         * landing page is a round trip nobody needs.
+         *
+         * Safe because the filenames carry a version (`hero-landscape-v1…`):
+         * re-encoding means bumping to `-v2` in scripts/encode-hero.mjs and
+         * in HeroVideo.tsx, which changes the URL rather than the bytes
+         * behind it. Never overwrite one of these files in place.
+         */
+        source: "/media/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           {
