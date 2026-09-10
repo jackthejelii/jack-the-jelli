@@ -16,6 +16,8 @@ export const LEGAL_INFO = {
   contactEmail: "jackthejelli@gmail.com",
   /** TODO: the number already used to confirm orders by phone. */
   contactPhone: "01641857905",
+  /** TODO: confirm the handle. Stored without the `@`, which the UI adds. */
+  instagram: "jackthejelli",
   /**
    * TODO: confirm with the business before launch. Quoted by both pages, so
    * changing it here changes it in both.

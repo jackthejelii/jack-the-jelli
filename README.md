@@ -461,6 +461,8 @@ BETTER_AUTH_SECRET        # also signs the receipt cookie
 BETTER_AUTH_URL           # MUST be the live origin in production
 RESEND_API_KEY
 EMAIL_FROM                # MUST be a verified sending domain in production
+EMAIL_FROM_ORDERS         # optional: receipts only; falls back to EMAIL_FROM
+SUPPORT_EMAIL             # contact-form inbox, and the default Reply-To
 DEV_INBOX                 # dev-only: the one address Resend really delivers to
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET

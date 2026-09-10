@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import AppLink from "@/components/layout/AppLink";
 import Logo from "@/components/layout/Logo";
+import MobileNav from "@/components/layout/MobileNav";
+import { NAV_LINKS } from "@/components/layout/nav-links";
 import UserMenu from "@/components/layout/UserMenu";
 import CartButton from "@/features/cart/components/CartButton";
 import CartSessionSync from "@/features/cart/components/CartSessionSync";
@@ -9,7 +11,8 @@ import CartSheet from "@/features/cart/components/CartSheet";
 /**
  * A server component: the blurred background is unconditional now, so nothing
  * here needs scroll position or any other browser state. Every interactive
- * piece below (UserMenu, CartButton, CartSheet, CartSessionSync) carries its
+ * piece below (MobileNav, UserMenu, CartButton, CartSheet, CartSessionSync)
+ * carries its
  * own "use client", and they coordinate through the module-level cart store
  * rather than a shared context, so each can be its own client root.
  */
@@ -17,6 +20,34 @@ export default function NavBar() {
   return (
     <nav className="border-border scrollbar-lock-safe bg-background/60 fixed inset-x-0 top-0 z-50 h-24 border-b backdrop-blur-md">
       <div className="relative mx-auto flex h-full max-w-360 items-center justify-center px-5 md:px-16">
+        {/* Absolute, like the account/cart cluster opposite, so the logo stays
+            optically centred in the bar regardless of how long the link labels
+            get. The drawer trigger and the inline links are the same three
+            destinations at two widths, never both on screen at once. */}
+        <div className="absolute left-5 flex items-center md:left-16">
+          {/* Same boundary, same reason as the cart button below: MobileNav
+              reads `usePathname()` to close itself on navigation, which is a
+              dynamic read under Cache Components. Unwrapped, it holds every
+              page that renders the nav back from prerendering, and the build
+              fails on the first route that was relying on it. The fallback
+              reserves the trigger's exact footprint so the bar doesn't shift
+              when it arrives. */}
+          <Suspense fallback={<div className="size-6 md:hidden" aria-hidden />}>
+            <MobileNav />
+          </Suspense>
+          <div className="hidden items-center gap-8 md:flex">
+            {NAV_LINKS.map((link) => (
+              <AppLink
+                key={link.href}
+                href={link.href}
+                className="text-foreground hover:text-on-surface-variant ease-editorial text-[12px] font-semibold tracking-[0.1em] uppercase transition-colors duration-(--motion-quick)"
+              >
+                {link.label}
+              </AppLink>
+            ))}
+          </div>
+        </div>
+
         <AppLink
           href="/"
           aria-label="Jack The Jelli, home"

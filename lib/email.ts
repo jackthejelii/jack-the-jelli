@@ -25,6 +25,28 @@ function escapeHtml(value: string): string {
 }
 
 /**
+ * `escapeHtml` guards the body; this guards the *headers*, which is a different
+ * problem with a worse failure. A display name or subject is interpolated into
+ * an RFC-5322 header, where a bare CR or LF ends the header and lets anything
+ * after it be read as a new one — a Bcc, a second Reply-To. The contact form
+ * puts a stranger's typed name into a `From` display name, so that input has to
+ * be flattened before it ever reaches Resend.
+ *
+ * Quotes and angle brackets go too: they are the address-vs-display-name
+ * delimiters, and a name containing them would produce a header that parses as
+ * something other than what was meant. Length is capped because an
+ * absurdly long name is either a mistake or an attempt.
+ */
+function sanitizeHeaderText(value: string, maxLength = 78): string {
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/["<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+/**
  * The one email template. Originally single-CTA shaped for the auth links;
  * `summaryHtml` was added so an order confirmation can carry an itemised block
  * without a second template drifting away from this one's styling.
@@ -65,6 +87,20 @@ interface SendEmailParams {
   summaryHtml?: string;
   /** What the dev-mode log line should show in place of a link. */
   devDetail?: string;
+  /**
+   * Overrides `EMAIL_FROM` for this one send. Every address on the verified
+   * domain can send, so `orders@` costs nothing beyond passing it here — but
+   * an address that looks monitored should be one that receives, so only use
+   * this for addresses the shop's mailbox actually collects.
+   */
+  from?: string;
+  /**
+   * Where a Reply lands. Defaults to `SUPPORT_EMAIL`, which is what stops
+   * `noreply@` being a dead end on every transactional email. The contact form
+   * overrides it with the customer's own address so the shop can answer them
+   * from the inbox.
+   */
+  replyTo?: string;
 }
 
 /**
@@ -82,6 +118,8 @@ async function sendEmail({
   action,
   summaryHtml,
   devDetail,
+  from,
+  replyTo,
 }: SendEmailParams) {
   const isProduction = process.env.NODE_ENV === "production";
   const isDevInbox = to === process.env.DEV_INBOX;
@@ -93,8 +131,8 @@ async function sendEmail({
     return;
   }
 
-  const from = process.env.EMAIL_FROM;
-  if (!process.env.RESEND_API_KEY || !from) {
+  const sender = from ?? process.env.EMAIL_FROM;
+  if (!process.env.RESEND_API_KEY || !sender) {
     throw new Error(
       "Email is not configured — set RESEND_API_KEY and EMAIL_FROM.",
     );
@@ -105,9 +143,15 @@ async function sendEmail({
   // or onboarding@resend.dev aimed at anyone but the account holder), a bad
   // API key, or a quota trip. Better Auth then tells the user to check an
   // inbox nothing was ever sent to, with nothing logged anywhere.
+  //
+  // `replyTo` defaults from env rather than per-call so the three existing
+  // senders inherit a working Reply without being touched. Without it the
+  // domain is send-only (no root MX — see docs/EMAIL-SENDER-PLAN.md) and a
+  // customer replying to their own receipt reaches nothing.
   const { error } = await resend.emails.send({
-    from,
+    from: sender,
     to,
+    replyTo: replyTo ?? process.env.SUPPORT_EMAIL,
     subject,
     html: renderEmailHtml(heading, bodyText, action, summaryHtml),
   });
@@ -219,6 +263,10 @@ export async function sendOrderConfirmationEmail({
 
   return sendEmail({
     to,
+    // The one email a customer is likely to reply to, so it is the one that
+    // gets its own address. Falls back to EMAIL_FROM when unset, which keeps
+    // this working on an environment that has not added the variable yet.
+    from: process.env.EMAIL_FROM_ORDERS,
     subject: `Order ${orderNumber} received — Jack The Jelli`,
     heading: "We have your order",
     bodyText: `Thank you, ${customerName}. We'll call you shortly on the number you gave to confirm this order before it's prepared. Payment is cash on delivery.`,
@@ -236,5 +284,99 @@ export async function sendOrderConfirmationEmail({
         }
       : undefined,
     devDetail: `order ${orderNumber}, ${formatPrice(totalAmount)} COD`,
+  });
+}
+
+/**
+ * The bare address out of `EMAIL_FROM`, which may be either a plain address or
+ * RFC-5322 `Display Name <address>`. Needed because the contact notification
+ * rebuilds the `From` with the customer's name in front of the same mailbox.
+ */
+function senderAddress(): string | undefined {
+  const raw = process.env.EMAIL_FROM?.trim();
+  if (!raw) return undefined;
+  return raw.match(/<([^>]+)>/)?.[1]?.trim() ?? raw;
+}
+
+export interface ContactNotificationParams {
+  name: string;
+  email: string;
+  phone?: string;
+  message: string;
+}
+
+/**
+ * Builds the `summaryHtml` slot for a contact notification.
+ *
+ * The message goes here rather than in `bodyText` for one reason: `bodyText`
+ * renders as a single paragraph, so a customer who wrote three paragraphs would
+ * arrive as one run-on block. Every value is escaped here, exactly as
+ * `renderOrderSummary` has to, because this slot is interpolated raw.
+ */
+function renderContactSummary({
+  name,
+  email,
+  phone,
+  message,
+}: ContactNotificationParams) {
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding: 4px 16px 4px 0; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #8a7968; white-space: nowrap; vertical-align: top;">${escapeHtml(label)}</td>
+      <td style="padding: 4px 0; font-size: 14px; color: #1a1a1a;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  // Escape first, then turn the surviving newlines into breaks. The other order
+  // would escape the tags this just wrote.
+  const body = escapeHtml(message).replace(/\r?\n/g, "<br />");
+
+  return `
+    <div style="border-top: 1px solid #e8e5df; border-bottom: 1px solid #e8e5df; padding: 20px 0; margin-bottom: 28px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        ${row("Name", name)}
+        ${row("Email", email)}
+        ${phone ? row("Phone", phone) : ""}
+      </table>
+      <p style="margin: 20px 0 0; font-size: 15px; line-height: 1.6; color: #1a1a1a;">${body}</p>
+    </div>
+  `;
+}
+
+/**
+ * Sent to the shop when someone writes from `/contact`.
+ *
+ * The addressing is the whole point. `From` stays on the verified domain (never
+ * the customer's address, which would fail SPF and DKIM and land in spam) but
+ * carries their name so the inbox is scannable; `Reply-To` is their real
+ * address, so hitting Reply in the mailbox starts an ordinary thread with them
+ * and the website is out of it from there.
+ *
+ * The customer's name reaches a header here, so it goes through
+ * `sanitizeHeaderText` rather than `escapeHtml`.
+ */
+export async function sendContactNotificationEmail({
+  name,
+  email,
+  phone,
+  message,
+}: ContactNotificationParams) {
+  const inbox = process.env.SUPPORT_EMAIL;
+  if (!inbox) {
+    throw new Error("Contact email is not configured — set SUPPORT_EMAIL.");
+  }
+
+  const displayName = sanitizeHeaderText(name) || "Someone";
+  const address = senderAddress();
+
+  return sendEmail({
+    to: inbox,
+    from: address
+      ? `${displayName} via Jack The Jelli <${address}>`
+      : undefined,
+    replyTo: email,
+    subject: `New message from ${sanitizeHeaderText(name, 60)} — Jack The Jelli`,
+    heading: "New message from the contact form",
+    bodyText: `Reply to this email to answer ${displayName} directly.`,
+    summaryHtml: renderContactSummary({ name, email, phone, message }),
+    devDetail: `contact message from ${email}`,
   });
 }

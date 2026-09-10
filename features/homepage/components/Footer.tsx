@@ -1,12 +1,18 @@
 import Link from "next/link";
 import Logo from "@/components/layout/Logo";
 import Reveal from "@/components/layout/Reveal";
+import InstagramIcon from "@/components/layout/InstagramIcon";
+import { LEGAL_LINKS } from "@/components/layout/nav-links";
+import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
-const supportLinks = [
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
-];
+const footerLinkClassName =
+  "text-on-surface-variant hover:text-foreground text-[14px] leading-relaxed transition-colors";
 
+/**
+ * Navigation moved to the nav bar, where it is reachable from every page
+ * without scrolling. What is left here is the footnote material: the one place
+ * to follow the brand, and the two documents nobody reads until they need to.
+ */
 export default function Footer() {
   return (
     <footer className="border-t border-[rgba(138,121,104,0.2)]">
@@ -26,13 +32,27 @@ export default function Footer() {
           Handmade leather goods, and the second looks that follow.
         </p>
 
-        {/* Centered: support links + copyright */}
+        {/* Centered: one row for everything that is not the brand itself.
+            The negative margin cancels the padding, so the link's layout box
+            is exactly the icon's 20px while the tap target stays 36px. Without
+            it the icon would sit noticeably further from its neighbours than
+            the text links sit from each other. */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          {supportLinks.map((link) => (
+          <a
+            href={`https://instagram.com/${LEGAL_INFO.instagram}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Jack The Jelli on Instagram, @${LEGAL_INFO.instagram}`}
+            className="text-on-surface-variant hover:text-foreground focus-visible:outline-foreground ease-editorial -m-2 p-2 transition-colors duration-(--motion-quick) focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <InstagramIcon className="size-5" />
+          </a>
+
+          {LEGAL_LINKS.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="text-on-surface-variant hover:text-foreground text-[14px] leading-relaxed transition-colors"
+              className={footerLinkClassName}
             >
               {link.label}
             </Link>
