@@ -21,11 +21,9 @@ import { cn } from "@/lib/utils";
  *
  *  · Load on a metered or slow connection (`Save-Data`, 2g/3g).
  *
- * Reduced motion is deliberately *not* one of them. The rotation is this
- * surface's argument rather than decoration laid over one, and playing it at
- * every setting is an explicit product decision — see the note in the
- * prefers-reduced-motion block in app/globals.css, which the hero is likewise
- * absent from. Restore the gate only if that decision is revisited.
+ * Reduced motion is deliberately *not* one of them, and no longer a special
+ * case here: the project ships no reduced-motion branch at all now. See the
+ * note where that block used to be in app/globals.css.
  *
  * `poster=` is deliberately absent: the next/image layer beneath is a better
  * poster in every way — AVIF, device-sized, build-time blur placeholder — and

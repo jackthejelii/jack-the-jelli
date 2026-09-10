@@ -76,6 +76,8 @@ export default function Reveal({
   index = 0,
   delay,
   group = false,
+  triggerRef,
+  onReveal,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -89,14 +91,43 @@ export default function Reveal({
    * the items in this mode and are ignored here.
    */
   group?: boolean;
+  /**
+   * Watch this element instead of the wrapper. A `group` has to *wrap* its
+   * items for the CSS to reach them, so on a tall section the wrapper's top
+   * edge crosses the fold long before the items do and the whole sequence
+   * plays off-screen. Pointing the observer at a marker sitting with the items
+   * fixes that without giving this component a second trigger point: the
+   * rootMargin above stays the one the whole site shares, which is exactly the
+   * consistency the note above is protecting.
+   */
+  triggerRef?: React.RefObject<HTMLElement | null>;
+  /**
+   * Fired once, when the group actually reveals. Lets a caller start something
+   * of its own on the same beat rather than running a second observer that
+   * drifts out of step with this one.
+   */
+  onReveal?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [revealed, setRevealed] = useState(false);
 
+  // Held in a ref so a caller passing an inline arrow cannot re-run the
+  // observer effect on every render. Assigned in its own effect, declared
+  // first so it lands before the one below reads it.
+  const onRevealRef = useRef(onReveal);
   useEffect(() => {
-    const el = ref.current;
-    if (!el || revealed) return;
+    onRevealRef.current = onReveal;
+  });
+
+  useEffect(() => {
+    if (revealed) return;
+    const el = triggerRef?.current ?? ref.current;
+    if (!el) return;
     return observe(el, () => setRevealed(true));
+  }, [revealed, triggerRef]);
+
+  useEffect(() => {
+    if (revealed) onRevealRef.current?.();
   }, [revealed]);
 
   return (

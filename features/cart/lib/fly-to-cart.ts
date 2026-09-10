@@ -28,10 +28,6 @@ const DURATION = 620;
 export function flyToCart(source: HTMLImageElement | null | undefined) {
   if (!source || typeof window === "undefined") return;
 
-  // The same preference the CSS honours, checked here because this animation
-  // is built in script and never passes through a stylesheet.
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
   const target = document.querySelector<HTMLElement>("[data-cart-target]");
   if (!target || typeof source.animate !== "function") return;
 

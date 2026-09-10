@@ -1,9 +1,7 @@
 "use client";
 
 import Lenis from "lenis";
-import { useEffect, useState } from "react";
-
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+import { useEffect } from "react";
 
 /**
  * Lenis-driven smooth scroll, mounted once at the root (app/layout.tsx).
@@ -18,33 +16,12 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
  * is hidden in app/globals.css to match.
  */
 export default function SmoothScroll() {
-  // Read synchronously so a reduced-motion user never gets an instance built
-  // and torn down on the first frame. This component renders null on both the
-  // server and the client, so branching on a browser-only API is hydration-safe.
-  const [reducedMotion, setReducedMotion] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia(REDUCED_MOTION).matches,
-  );
-
-  // The preference can be toggled mid-session; re-run rather than trapping the
-  // user in whichever mode they loaded the page in.
   useEffect(() => {
-    const query = window.matchMedia(REDUCED_MOTION);
-    const onChange = (event: MediaQueryListEvent) =>
-      setReducedMotion(event.matches);
-
-    setReducedMotion(query.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    // Skip Lenis entirely: no instance, no rAF loop, plain native scrolling.
-    // (Lenis' own `respectReducedMotion` only neutralises the easing — it still
-    // constructs an instance and runs the loop.)
-    if (reducedMotion) return;
-
+    // Runs at every OS setting. This used to skip Lenis entirely under
+    // prefers-reduced-motion; that branch was removed along with the rest of
+    // the project's reduced-motion handling (see the note in app/globals.css).
+    // Lenis' own `respectReducedMotion` is deliberately left off for the same
+    // reason rather than being switched on as a middle ground.
     const lenis = new Lenis({
       // Inner scrollers — the cart sheet's item list, the collection search
       // dropdown, the admin sidebar, every Radix select/dropdown — are found by
@@ -69,7 +46,7 @@ export default function SmoothScroll() {
       cancelAnimationFrame(frame);
       lenis.destroy();
     };
-  }, [reducedMotion]);
+  }, []);
 
   return null;
 }

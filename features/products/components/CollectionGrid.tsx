@@ -88,7 +88,7 @@ export default function CollectionGrid({
           {products.map((product, i) => (
             <div
               key={product.id}
-              className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-both motion-safe:ease-editorial motion-safe:duration-(--motion-reveal)"
+              className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both ease-editorial duration-(--motion-reveal)"
               style={{
                 animationDelay: `calc(${Math.min(i, 5)} * var(--motion-stagger))`,
               }}

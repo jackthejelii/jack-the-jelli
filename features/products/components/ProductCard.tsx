@@ -34,12 +34,17 @@ export default function ProductCard({
     product.variants[0];
 
   /*
-   * data-product-frame marks the image box. It is a styling hook, like
-   * data-product-root below it: the homepage featured strip wipes the
-   * photograph in behind a clip-path and retimes the hover zoom, and both need
-   * to address the frame from outside without this component knowing where it
-   * is being used. On both variants deliberately — a hook that exists on only
-   * one of two identical boxes is a trap for whoever reaches for it next.
+   * data-product-frame marks the image box, data-product-caption the name and
+   * price beneath it. They are styling hooks, like data-product-root below:
+   * the homepage featured strip wipes the photograph in behind a clip-path,
+   * retimes the hover zoom, and strikes the caption up out of its own clip a
+   * beat later, and all three need to address the card from outside without
+   * this component knowing where it is being used. The caption's two lines are
+   * each wrapped in a span for the same reason — the clip goes on the line box
+   * and the span is what travels inside it, so the strip can run the effect
+   * without this file owning it. On both variants deliberately — a hook that
+   * exists on only one of two identical boxes is a trap for whoever reaches
+   * for it next.
    *
    * Both variants frame the image the same way: a square box, object-contain.
    * Square because a wallet is a landscape-shaped object -- the old aspect-4/5
@@ -76,12 +81,12 @@ export default function ProductCard({
           />
         </div>
 
-        <div className="mt-4 text-center">
+        <div data-product-caption="" className="mt-4 text-center">
           <h3 className="text-foreground font-serif text-[18px] leading-[1.6]">
-            {product.name}
+            <span>{product.name}</span>
           </h3>
           <p className="text-on-surface-variant mt-1 text-[16px] leading-[1.6]">
-            {formatPrice(product.price)}
+            <span>{formatPrice(product.price)}</span>
           </p>
         </div>
       </AppLink>
@@ -118,12 +123,12 @@ export default function ProductCard({
         </div>
       </AppLink>
 
-      <div className="mt-4 text-center">
+      <div data-product-caption="" className="mt-4 text-center">
         <h3 className="text-foreground font-serif text-[18px] leading-[1.6]">
-          {product.name}
+          <span>{product.name}</span>
         </h3>
         <p className="text-on-surface-variant mt-1 text-[16px] leading-[1.6]">
-          {formatPrice(product.price)}
+          <span>{formatPrice(product.price)}</span>
         </p>
 
         {/* Renders nothing at all for a one-colour piece — see ColorSwatches. */}

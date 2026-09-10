@@ -170,8 +170,8 @@
    differs across engines.
 
    The page still scrolls natively — nothing is set to overflow:hidden — so
-   keyboard, trackpad and reduced-motion users keep normal scrolling with only
-   the indicator gone. */
+   keyboard and trackpad scrolling both keep working with only the indicator
+   gone. */
 html,
 body {
   scrollbar-width: none;
@@ -295,6 +295,12 @@ body::-webkit-scrollbar {
   .featured-frame [data-product-frame] {
     clip-path: none;
   }
+
+  /* Without this the product names and prices stay clipped out of their own
+     line boxes forever. The entrance is decoration; the catalogue is not. */
+  .featured-frame [data-product-caption] > * > span {
+    transform: none;
+  }
 }
 
 /* Featured strip — features/homepage/components/FeaturedStrip.tsx.
@@ -376,6 +382,48 @@ body::-webkit-scrollbar {
 
 .reveal-group[data-revealed="true"] .featured-frame [data-product-frame] {
   clip-path: inset(0 0 0 0);
+}
+
+/* The caption is struck a beat after its own photograph, so the card arrives
+   as a plate being set rather than as a box that appeared: the frame wipes
+   open, and only then are the name and price typeset beneath it.
+
+   Same device as .featured-mask and the hero's .hero-mask — the clip sits on
+   the line box and a span travels inside it — applied one level down, at the
+   card. No opacity here either: the clipped edge is the whole point, and
+   fading as well would soften the only thing that makes it read as type being
+   set. The two lines are one --motion-stagger apart, which is what makes them
+   read as a caption rather than as two elements that happened to move.
+
+   The 260ms offset puts the strike behind the photo wipe's own 120ms offset,
+   so the order down the card is always frame, then name, then price. */
+.featured-frame [data-product-caption] > * {
+  display: block;
+  overflow: hidden;
+  /* Room for descenders inside the clip, taken back out of the layout. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.featured-frame [data-product-caption] > * > span {
+  display: block;
+  transform: translate3d(0, 115%, 0);
+  transition: transform var(--motion-reveal-lg) var(--motion-ease)
+    calc(var(--reveal-delay, 0ms) + 260ms);
+}
+
+.featured-frame [data-product-caption] > * + * > span {
+  transition-delay: calc(
+    var(--reveal-delay, 0ms) + 260ms + var(--motion-stagger)
+  );
+}
+
+.reveal-group[data-revealed="true"]
+  .featured-frame
+  [data-product-caption]
+  > *
+  > span {
+  transform: none;
 }
 
 /* Hover. Separate element from the reveal item on purpose: the item is still
@@ -694,98 +742,21 @@ body::-webkit-scrollbar {
   animation: session-placeholder-in 200ms ease 120ms forwards;
 }
 
-/* Skeleton is a shared primitive (components/ui/skeleton.tsx) whose
-   animate-pulse doesn't respect prefers-reduced-motion on its own, and it's
-   used in places a motion-safe: variant at the call site can't reach. */
-@media (prefers-reduced-motion: reduce) {
-  [data-slot="skeleton"] {
-    animation: none;
-  }
+/* This project deliberately ships no `prefers-reduced-motion` branch.
 
-  /* The indicator stays — withholding the one signal that a slow navigation is
-     underway would be a worse experience, not a calmer one. It just stops
-     moving: a static hairline across the top instead of a sweep. The fade-in
-     survives because it is the 120ms debounce, not decoration. */
-  .route-progress-bar {
-    width: 100%;
-    animation: route-progress-fade-in 1ms linear 120ms forwards;
-  }
+   Motion here is treated as part of the design rather than as decoration laid
+   over it, and the owner's decision is that it runs at every OS setting. The
+   block that used to sit here neutralised the skeleton pulse, the route
+   indicator, the page fade, every scroll reveal, the featured strip's whole
+   entrance, the cart tick and the hero, and it has been removed rather than
+   narrowed.
 
-  /* The placeholder itself stays, for the same reason the bar above does: it
-     is the only sign the account control is still coming. The fade collapses
-     to the bare 120ms debounce — timing, not decoration.
+   Two things this does NOT license, because neither is a motion preference:
+   nothing may be left permanently invisible when an animation fails to run
+   (every entrance in this file fills with `both`, or rests visible), and no
+   control may become unreachable while something is moving. The featured
+   strip's drift, for instance, still stops on drag and resumes after a dwell.
 
-     The spinner slows rather than stops. Frozen, animate-spin leaves a bare
-     three-quarter arc hanging in the navbar, which reads as a broken icon
-     instead of a calm one; at 3s it is still legibly turning without being
-     the fast repeating motion the preference is actually asking us to drop.
-     Nothing else in the file covers this — [data-slot="skeleton"] only
-     reaches the shared Skeleton primitive, not animate-spin. */
-  .session-placeholder {
-    animation: session-placeholder-in 1ms linear 120ms forwards;
-  }
-
-  .session-placeholder .animate-spin {
-    animation-duration: 3s;
-  }
-
-  .page-fade {
-    animation: none;
-  }
-
-  /* Reveals arrive instantly rather than not at all — the entrance is
-     decoration, the content is not. */
-  .reveal,
-  [data-reveal-item] {
-    transition: none;
-    opacity: 1;
-    transform: none;
-  }
-
-  /* Same for the featured strip's richer entrance: the heading, the rule and
-     the photographs are all present at rest, they just stop travelling to get
-     there. The auto-scroll is disabled in the component rather than here —
-     the plugin moves the carousel through its own API, and no CSS rule can
-     reach that. */
-  .featured-mask > *,
-  .featured-drift[data-reveal-item],
-  .featured-lift {
-    transition: none;
-    transform: none;
-  }
-
-  .featured-rule {
-    transition: none;
-    transform: scaleX(1);
-  }
-
-  .featured-frame [data-product-frame] {
-    transition: none;
-    clip-path: none;
-  }
-
-  .featured-lift h3::after {
-    transition: none;
-  }
-
-  .cart-tick {
-    animation: none;
-  }
-
-  /* The hero is deliberately absent from this block. Its motion is the
-     surface's argument rather than decoration on top of one, and it is kept at
-     full strength at every setting by an explicit product decision: the film,
-     the settle, the lockup sequence and the sheen all run. Nothing here ever
-     leaves hero content unreachable — every entrance uses `both`, so each
-     element still comes to rest visible on its own.
-
-     Do not fold .hero-settle, .hero-rule, .hero-mask, .hero-rise or
-     .cta-sheen back into this block without asking; their omission is the
-     decision, not an oversight. */
-
-  /* The dim stays — it is the only signal that a filter is still resolving —
-     it just arrives without a fade. */
-  [data-results] {
-    transition: none;
-  }
-}
+   Restore a branch here only on an explicit decision to revisit that, not as
+   incidental tidying.
+*/
