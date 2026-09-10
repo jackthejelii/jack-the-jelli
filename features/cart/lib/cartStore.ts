@@ -45,7 +45,9 @@ export interface CartItem {
 
 /** How a line names itself in a toast or a "no longer available" notice. */
 export function lineLabel(line: { name: string; color: string }): string {
-  return line.color ? `${line.name} — ${line.color}` : line.name;
+  // Comma, not an em-dash: the storefront's voice rule bans the em-dash from
+  // rendered copy, and this string goes straight into a toast.
+  return line.color ? `${line.name}, ${line.color}` : line.name;
 }
 
 /**

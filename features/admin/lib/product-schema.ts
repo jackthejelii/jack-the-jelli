@@ -29,6 +29,8 @@ export const PRODUCT_VALUE_FIELDS = [
   "category",
   "price",
   "description",
+  "material",
+  "dimensions",
   "featured",
   "variants",
 ] as const;
@@ -188,6 +190,21 @@ export const createProductSchema = z.object({
     .max(5000, "Description cannot exceed 5000 characters")
     .optional()
     .transform((value) => (value && value.length > 0 ? value : undefined)),
+  // Both optional and both blank-to-undefined, so clearing the field in the
+  // form unsets it on the document rather than storing an empty string that
+  // the detail page would then render as a blank row.
+  material: z
+    .string()
+    .trim()
+    .max(120, "Material cannot exceed 120 characters")
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined)),
+  dimensions: z
+    .string()
+    .trim()
+    .max(120, "Dimensions cannot exceed 120 characters")
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : undefined)),
   variants: variantsField,
   featured: checkboxField,
   intent: productIntentSchema,
@@ -229,6 +246,8 @@ export function readProductFormData(formData: FormData) {
     category: get("category") ?? "",
     price: get("price") ?? "",
     description: get("description"),
+    material: get("material"),
+    dimensions: get("dimensions"),
     variants: get("variants") ?? "[]",
     featured: get("featured"),
     intent: get("intent"),

@@ -35,8 +35,13 @@ export interface AddToCartColorway {
 interface AddToCartButtonProps {
   product: AddToCartProduct;
   colorway: AddToCartColorway;
-  /** "detail" is the full-width primary CTA; "card" is the compact grid variant. */
-  variant?: "card" | "detail";
+  /**
+   * "detail" is the full-width primary CTA, "card" the compact grid variant,
+   * and "sticky" the one in the mobile buy bar — same fill, shorter, and
+   * without the arrow, because it sits beside the price rather than under a
+   * column of copy.
+   */
+  variant?: "card" | "detail" | "sticky";
   className?: string;
 }
 
@@ -89,8 +94,15 @@ export default function AddToCartButton({
       onClick={handleClick}
       disabled={soldOut}
       className={cn(
-        "bg-foreground text-background hover:bg-secondary ease-editorial group inline-flex items-center justify-center gap-2 rounded-none text-[12px] font-semibold tracking-widest uppercase transition-[color,background-color,transform] duration-(--motion-quick) active:translate-y-px disabled:pointer-events-none disabled:opacity-40",
-        variant === "detail" ? "w-full py-4" : "w-full px-3 py-3",
+        // hover:bg-secondary-hover, not hover:bg-secondary: the latter put the
+        // #faf9f6 label at 3.98:1, under the AA floor for this 12px/600 text,
+        // so the primary action got harder to read the moment you pointed at
+        // it. See the token note in app/globals.css.
+        "bg-foreground text-background hover:bg-secondary-hover ease-editorial group inline-flex items-center justify-center gap-2 rounded-none tracking-widest uppercase transition-[color,background-color,transform] duration-(--motion-quick) active:translate-y-px disabled:pointer-events-none disabled:opacity-40",
+        "label-caps",
+        variant === "detail" && "w-full py-4",
+        variant === "card" && "w-full px-3 py-3",
+        variant === "sticky" && "shrink-0 px-6 py-3.5",
         className,
       )}
     >

@@ -94,6 +94,8 @@ function toProductDetail(product: LeanProduct): ProductDetail {
     category: product.category?.name ?? "Uncategorised",
     price: product.price,
     description: product.description,
+    material: product.material,
+    dimensions: product.dimensions,
     variants: (product.variants ?? []).map((variant) => ({
       id: String(variant._id),
       color: variant.color,

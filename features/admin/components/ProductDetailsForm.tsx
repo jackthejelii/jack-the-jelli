@@ -114,6 +114,49 @@ export default function ProductDetailsForm({
           <FieldError>{errors?.description}</FieldError>
         </Field>
       </section>
+
+      {/* The two facts a considered buyer compares makers on, and the two the
+          storefront could not state before this section existed. Both optional:
+          leave either blank and the detail page omits the row rather than
+          printing an empty one. */}
+      <section>
+        <h3 className="border-border font-heading text-foreground mb-8 border-b pb-4 text-2xl">
+          Specifications
+        </h3>
+        <div className="grid gap-8 md:grid-cols-2">
+          <Field data-invalid={Boolean(errors?.material) || undefined}>
+            <FieldLabel htmlFor="material" className={fieldLabelClassName}>
+              Material
+            </FieldLabel>
+            <Input
+              id="material"
+              name="material"
+              type="text"
+              defaultValue={values?.material ?? product.material ?? ""}
+              aria-invalid={Boolean(errors?.material)}
+              className={underlineInputClassName}
+              placeholder="Full-grain calfskin"
+            />
+            <FieldError>{errors?.material}</FieldError>
+          </Field>
+
+          <Field data-invalid={Boolean(errors?.dimensions) || undefined}>
+            <FieldLabel htmlFor="dimensions" className={fieldLabelClassName}>
+              Dimensions
+            </FieldLabel>
+            <Input
+              id="dimensions"
+              name="dimensions"
+              type="text"
+              defaultValue={values?.dimensions ?? product.dimensions ?? ""}
+              aria-invalid={Boolean(errors?.dimensions)}
+              className={underlineInputClassName}
+              placeholder="11 x 9 cm closed"
+            />
+            <FieldError>{errors?.dimensions}</FieldError>
+          </Field>
+        </div>
+      </section>
     </div>
   );
 }

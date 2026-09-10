@@ -191,8 +191,17 @@ export async function createProduct(
     };
   }
 
-  const { name, category, price, description, variants, featured, intent } =
-    parsed.data;
+  const {
+    name,
+    category,
+    price,
+    description,
+    material,
+    dimensions,
+    variants,
+    featured,
+    intent,
+  } = parsed.data;
 
   try {
     await connectDB();
@@ -202,6 +211,8 @@ export async function createProduct(
       category: new Types.ObjectId(category),
       price,
       description,
+      material,
+      dimensions,
       status: intent === "publish" ? "Published" : "Draft",
       featured,
       // Every colourway is new here, so none carries an id — Mongoose mints one
@@ -260,8 +271,18 @@ export async function updateProduct(
     };
   }
 
-  const { id, name, category, price, description, variants, featured, intent } =
-    parsed.data;
+  const {
+    id,
+    name,
+    category,
+    price,
+    description,
+    material,
+    dimensions,
+    variants,
+    featured,
+    intent,
+  } = parsed.data;
 
   // Captured before the colourways are replaced, so the cleanup below knows
   // what was dropped — including every photo of a colour that was removed
@@ -283,6 +304,8 @@ export async function updateProduct(
     product.category = new Types.ObjectId(category);
     product.price = price;
     product.description = description;
+    product.material = material;
+    product.dimensions = dimensions;
     // Same intent switch as create (D4), so this is also how a draft ships.
     product.status = intent === "publish" ? "Published" : "Draft";
     product.featured = featured;

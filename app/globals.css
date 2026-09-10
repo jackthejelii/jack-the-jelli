@@ -30,6 +30,7 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
@@ -72,6 +73,12 @@
 
   --secondary: #8a7968; /* Secondary */
   --secondary-foreground: #faf9f6;
+  /* The primary button's hover fill. --secondary itself carries #faf9f6 text
+     at 3.98:1, under the 4.5:1 AA floor for the 12px/600 label — so the CTA
+     became *less* readable on hover, which is the one direction a hover state
+     must never go. Darkened just far enough to clear it (4.78:1) and no
+     further, so the warmth of the brand brown survives. */
+  --secondary-hover: #7d6c5c;
 
   --muted: #f3f1ed; /* Tertiary */
   --muted-foreground: #8a7968; /* Secondary makes an elegant muted text */
@@ -180,6 +187,19 @@ body {
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none;
+}
+
+/* The tracked uppercase micro-label the storefront uses for eyebrows, spec
+   labels, stock lines and button text. It was written out inline as
+   `text-[12px] font-semibold tracking-[0.1em] uppercase` in a dozen places,
+   which is how the size and tracking quietly drifted apart between surfaces.
+   600 is the only Inter weight above 400 that is actually loaded — see the
+   font note in app/layout.tsx. */
+@utility label-caps {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* react-remove-scroll (Radix Select/Dialog/Sheet) hides the page scrollbar
@@ -740,6 +760,37 @@ body::-webkit-scrollbar {
 @utility session-placeholder {
   opacity: 0;
   animation: session-placeholder-in 200ms ease 120ms forwards;
+}
+
+/* The loading placeholder's motion.
+   Replaces shadcn's stock `animate-pulse`, which was the only animation on the
+   site that did not come from the tokens above: a symmetrical opacity throb on
+   a 2s linear loop, in a system whose whole vocabulary is one curve and two
+   durations. A sweep travelling in the reading direction is also a better
+   signal than a pulse, because it says "content is arriving here" rather than
+   "something is blinking".
+   The gradient sits on top of the skeleton's own background rather than
+   replacing it, so a placeholder still reads as a filled block on the first
+   frame, before the animation has moved. */
+@keyframes skeleton-sweep {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@utility skeleton-sweep {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--foreground) 5%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1600ms var(--motion-ease) infinite;
 }
 
 /* This project deliberately ships no `prefers-reduced-motion` branch.

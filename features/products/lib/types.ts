@@ -88,6 +88,10 @@ export interface ProductDetail {
   category: string;
   price: number;
   description?: string;
+  /** Optional: the spec list omits the row rather than printing it empty. */
+  material?: string;
+  /** Optional, free text so the unit travels with the value. See models/Product.ts. */
+  dimensions?: string;
   /** Never empty. The first entry is the colour the page opens on. */
   variants: ProductDetailVariant[];
 }

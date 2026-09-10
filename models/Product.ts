@@ -43,6 +43,14 @@ export interface IProduct {
   category: mongoose.Types.ObjectId;
   price: number;
   description?: string;
+  /**
+   * What the piece is made of, as the shopper would want it stated — "Full-grain
+   * calfskin", not a tannery code. Optional because the catalogue predates the
+   * field; the detail page simply omits the row when it is empty.
+   */
+  material?: string;
+  /** Closed dimensions, free text so the unit travels with the value: "11 x 9 cm closed". */
+  dimensions?: string;
   status: ProductStatus;
   /**
    * Admin-set flag for the homepage featured strip. A dedicated boolean rather
@@ -100,6 +108,8 @@ const productSchema = new Schema<IProduct>(
     // BDT, stored as whole taka — not paisa.
     price: { type: Number, required: true, min: 0 },
     description: { type: String, trim: true },
+    material: { type: String, trim: true, maxlength: 120 },
+    dimensions: { type: String, trim: true, maxlength: 120 },
     status: {
       type: String,
       enum: PRODUCT_STATUSES,

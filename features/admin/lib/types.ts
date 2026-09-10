@@ -54,6 +54,8 @@ export interface ProductDTO {
   categoryName: string;
   price: number;
   description?: string;
+  material?: string;
+  dimensions?: string;
   status: ProductStatus;
   /** Surfaces this product in the homepage featured strip. */
   featured: boolean;

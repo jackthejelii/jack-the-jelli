@@ -30,6 +30,8 @@ function toProductDTO(product: LeanProduct): ProductDTO {
     categoryName: product.category?.name ?? "Uncategorised",
     price: product.price,
     description: product.description,
+    material: product.material,
+    dimensions: product.dimensions,
     status: product.status,
     // Coerced: documents written before the field existed have no value.
     featured: Boolean(product.featured),

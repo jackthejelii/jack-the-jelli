@@ -231,6 +231,53 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
             <FieldError>{errors?.description}</FieldError>
           </Field>
         </ProductFormSection>
+
+        {/* Optional on purpose — a piece can ship without them and the detail
+            page simply omits the row. They exist so the storefront can answer
+            "what is it made of" and "how big is it" with a field rather than a
+            sentence buried in the narrative above. */}
+        <ProductFormSection
+          title="Specifications"
+          description="What the piece is made of and how large it is. Both appear as their own rows on the product page."
+        >
+          <div className="flex flex-col gap-8 md:flex-row md:gap-6">
+            <Field
+              className="flex-1"
+              data-invalid={Boolean(errors?.material) || undefined}
+            >
+              <FieldLabel htmlFor="material" className={fieldLabelClassName}>
+                Material
+              </FieldLabel>
+              <Input
+                id="material"
+                name="material"
+                defaultValue={state.values?.material}
+                aria-invalid={Boolean(errors?.material)}
+                placeholder="Full-grain calfskin"
+                className={boxedInputClassName}
+              />
+              <FieldError>{errors?.material}</FieldError>
+            </Field>
+
+            <Field
+              className="flex-1"
+              data-invalid={Boolean(errors?.dimensions) || undefined}
+            >
+              <FieldLabel htmlFor="dimensions" className={fieldLabelClassName}>
+                Dimensions
+              </FieldLabel>
+              <Input
+                id="dimensions"
+                name="dimensions"
+                defaultValue={state.values?.dimensions}
+                aria-invalid={Boolean(errors?.dimensions)}
+                placeholder="11 x 9 cm closed"
+                className={boxedInputClassName}
+              />
+              <FieldError>{errors?.dimensions}</FieldError>
+            </Field>
+          </div>
+        </ProductFormSection>
       </div>
     </form>
   );
