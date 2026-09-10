@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import {
   Carousel,
   CarouselContent,
@@ -10,75 +9,13 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import ProductImage from "@/features/products/components/ProductImage";
 import { cn } from "@/lib/utils";
 
 interface ProductGalleryProps {
   /** Already resolved by the caller — never empty. */
   images: { url: string }[];
   alt: string;
-}
-
-/**
- * One gallery slide, fading up as its bytes land.
- *
- * Nothing in this codebase resizes or recompresses a product photograph, which
- * is a deliberate constraint and not one to work around — so these arrive as
- * full-size Cloudinary originals, and on the mobile connections most of this
- * shop's buyers are on, they used to snap in at full opacity the instant they
- * decoded. Against the near-white page that reads as a flicker rather than an
- * arrival.
- *
- * `onLoad` rather than a blur placeholder: `placeholder="blur"` needs a
- * `blurDataURL` per image, which for remote Cloudinary sources means either
- * generating one at upload time (a processing step this project does not do)
- * or shipping a second request per photo. A fade costs neither and is honest
- * about what it is.
- *
- * Starts opaque when the image is already complete — a cached photo, or a
- * remount on a swatch click — so switching colours never re-fades a picture
- * the browser already has.
- */
-function GalleryImage({
-  src,
-  alt,
-  loading,
-  fetchPriority,
-  sizes,
-}: {
-  src: string;
-  alt: string;
-  loading: "eager" | "lazy";
-  fetchPriority: "high" | "auto";
-  sizes: string;
-}) {
-  const [loaded, setLoaded] = useState(false);
-
-  // A cached image can finish decoding before React attaches onLoad, and that
-  // event never replays — the classic way a fade-in strands a photograph at
-  // zero opacity forever. The ref callback catches that case on mount by
-  // asking the element whether it is already done.
-  const markIfComplete = (node: HTMLImageElement | null) => {
-    if (node?.complete) setLoaded(true);
-  };
-
-  return (
-    <Image
-      src={src}
-      alt={alt}
-      fill
-      ref={markIfComplete}
-      loading={loading}
-      fetchPriority={fetchPriority}
-      sizes={sizes}
-      onLoad={() => setLoaded(true)}
-      // contain, not cover: the whole photo has to be visible on this page, so
-      // the box mats the image rather than cropping it to fit.
-      className={cn(
-        "ease-editorial object-contain transition-opacity duration-(--motion-reveal)",
-        loaded ? "opacity-100" : "opacity-0",
-      )}
-    />
-  );
 }
 
 export default function ProductGallery({ images, alt }: ProductGalleryProps) {
@@ -125,7 +62,7 @@ export default function ProductGallery({ images, alt }: ProductGalleryProps) {
                   it — `svh` so a collapsing mobile URL bar doesn't overshoot;
                   above ~2K the cap exceeds the column width and goes inert. */}
               <div className="bg-background relative aspect-square overflow-hidden lg:mx-auto lg:max-w-[calc(100svh-14rem)]">
-                <GalleryImage
+                <ProductImage
                   src={image.url}
                   alt={
                     hasMultiple
@@ -183,13 +120,12 @@ export default function ProductGallery({ images, alt }: ProductGalleryProps) {
                   : "border-transparent opacity-60 hover:opacity-100",
               )}
             >
-              <Image
+              <ProductImage
                 src={image.url}
                 alt=""
-                fill
-                // 120px only holds for the 6-column desktop strip; the mobile
-                // strip is 4 columns of a much narrower gallery.
-                sizes="(min-width: 1024px) 120px, (min-width: 640px) 16vw, 25vw"
+                // Tracks the auto-fit strip above: 120px is the desktop cell,
+                // 80px the mobile one.
+                sizes="(min-width: 640px) 120px, 80px"
                 // Matches the slide it selects — a cropped thumbnail would
                 // preview a framing the main image never shows.
                 className="object-contain"

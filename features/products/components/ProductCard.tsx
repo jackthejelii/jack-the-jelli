@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import AppLink from "@/components/layout/AppLink";
 import AddToCartButton from "@/features/products/components/AddToCartButton";
 import ColorSwatches from "@/features/products/components/ColorSwatches";
+import ProductImage from "@/features/products/components/ProductImage";
 import { formatPrice } from "@/features/products/lib/format";
 import { defaultVariant } from "@/features/products/lib/variants";
 import { Product } from "@/features/products/lib/types";
@@ -70,14 +70,13 @@ export default function ProductCard({
           data-product-frame=""
           className="bg-surface-container relative aspect-square overflow-hidden"
         >
-          <Image
+          <ProductImage
             src={selected?.thumbnail || "/image-placeholder.jpg"}
             alt={product.name}
-            fill
             // Always below the fold where this variant is used.
             loading="lazy"
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 70vw"
-            className="ease-editorial object-contain transition-transform duration-700 group-hover:scale-105"
+            className="object-contain transition-transform duration-700 group-hover:scale-105"
           />
         </div>
 
@@ -102,10 +101,11 @@ export default function ProductCard({
           data-product-frame=""
           className="bg-surface-container relative aspect-square overflow-hidden"
         >
-          <Image
+          <ProductImage
             // Keyed by the colourway so React swaps the element rather than
             // reusing it — without this the browser keeps painting the old
-            // photograph until the new one has decoded.
+            // photograph until the new one has decoded. The remount is also
+            // what puts the placeholder back while the new colour loads.
             key={selected?.id}
             src={selected?.thumbnail || "/image-placeholder.jpg"}
             alt={
@@ -113,12 +113,11 @@ export default function ProductCard({
                 ? `${product.name} in ${selected.color}`
                 : product.name
             }
-            fill
             // priority is deprecated in Next 16 — see ProductGallery.tsx.
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="ease-editorial object-contain transition-transform duration-700 group-hover:scale-105"
+            className="object-contain transition-transform duration-700 group-hover:scale-105"
           />
         </div>
       </AppLink>
