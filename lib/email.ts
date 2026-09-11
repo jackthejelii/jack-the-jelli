@@ -384,29 +384,64 @@ export async function sendContactNotificationEmail({
 }
 
 /**
+ * Fetches a received message's actual content.
+ *
+ * The `email.received` webhook carries **metadata only** — `from`, `to`,
+ * `subject`, `email_id` and nothing else. It has no body and no headers, so a
+ * forwarder built on the webhook payload alone produces an empty message with
+ * the envelope sender in Reply-To. The content lives behind this endpoint,
+ * keyed by the payload's `email_id`.
+ *
+ * `reply_to` matters as much as the body: when the shop's own contact form
+ * mails `support@`, the envelope `from` is our `noreply@` and the customer's
+ * real address is in `Reply-To`. Reading only `from` makes every forwarded
+ * message unanswerable.
+ */
+async function fetchReceivedEmail(emailId: string): Promise<{
+  from?: string;
+  reply_to?: string[];
+  subject?: string;
+  text?: string;
+  html?: string;
+}> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error("RESEND_API_KEY is not set.");
+
+  const response = await fetch(
+    `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+  );
+
+  if (!response.ok) {
+    // Thrown so the route 500s and Resend retries: a transient fetch failure
+    // must not silently forward an empty message, which is indistinguishable
+    // from a customer who wrote nothing.
+    throw new Error(
+      `Could not retrieve received email ${emailId}: ${response.status}`,
+    );
+  }
+
+  return response.json();
+}
+
+/**
  * The domain's own MX now points at Resend's inbound endpoint, so mail to
  * `support@jackthejelli.com` lands in Resend rather than bouncing. Resend has
  * no mailbox UI worth living in, so this hands each message on to a real inbox
  * the owner already reads — `SUPPORT_FORWARD_TO`.
  *
- * `from` is our own verified sender, never the stranger who wrote in:
- * re-sending as them would fail SPF and DKIM for their domain and teach every
- * receiver that we forge addresses. Their address goes in `Reply-To` instead,
- * so hitting Reply in the forwarded copy answers the customer directly — the
- * same arrangement `sendContactNotificationEmail` already uses.
+ * `from` on the forwarded copy is our own verified sender, never the stranger
+ * who wrote in: re-sending as them would fail SPF and DKIM for their domain and
+ * teach every receiver that we forge addresses. Their address goes in
+ * `Reply-To` instead, so hitting Reply answers the customer directly — the same
+ * arrangement `sendContactNotificationEmail` already uses.
  */
 export async function forwardInboundEmail({
-  from,
+  emailId,
   to,
-  subject,
-  text,
-  html,
 }: {
-  from: string;
+  emailId: string;
   to?: string;
-  subject?: string;
-  text?: string;
-  html?: string;
 }) {
   const destination = process.env.SUPPORT_FORWARD_TO;
   if (!destination) {
@@ -425,27 +460,42 @@ export async function forwardInboundEmail({
     );
   }
 
+  const received = await fetchReceivedEmail(emailId);
+  const { subject, text, html } = received;
+
   const sender = senderAddress();
-  const replyAddress = from.match(/<([^>]+)>/)?.[1]?.trim() ?? from.trim();
+  // `reply_to` first: see the note on `fetchReceivedEmail`. Falls back to the
+  // envelope sender for ordinary mail, which carries no Reply-To at all.
+  const rawReply = received.reply_to?.[0] ?? received.from ?? "";
+  const replyAddress =
+    rawReply.match(/<([^>]+)>/)?.[1]?.trim() ?? rawReply.trim();
+
+  // An inbound message with no usable sender is rare but possible (a malformed
+  // bounce, say). Reply-To is left unset rather than pointed somewhere wrong,
+  // and the label says so instead of rendering an empty "From ".
+  const hasReply = replyAddress.includes("@");
+  const senderLabel = hasReply ? replyAddress : "an unknown sender";
 
   return sendEmail({
     to: destination,
     from: sender
-      ? `${sanitizeHeaderText(replyAddress, 60)} via Jack The Jelli <${sender}>`
+      ? `${sanitizeHeaderText(senderLabel, 60)} via Jack The Jelli <${sender}>`
       : undefined,
-    replyTo: replyAddress,
+    replyTo: hasReply ? replyAddress : undefined,
     subject: subject
       ? sanitizeHeaderText(subject, 120)
       : "(no subject) — forwarded from the shop inbox",
     heading: `Mail to ${sanitizeHeaderText(to ?? "the shop", 60)}`,
-    bodyText: `From ${replyAddress}. Reply to this email to answer them directly.`,
+    bodyText: hasReply
+      ? `From ${senderLabel}. Reply to this email to answer them directly.`
+      : "Forwarded from the shop inbox. This message carried no usable reply address.",
     // The only caller-supplied HTML this module ever renders. An inbound
     // message is a stranger's markup, so it is NOT passed through to
     // `summaryHtml`, which is the trusted slot — the plain-text part is escaped
     // and wrapped instead. A forwarded copy that loses styling is a fair price
     // for not rendering an attacker's HTML in the owner's mail client.
     summaryHtml: renderForwardedBody(text, html),
-    devDetail: `inbound mail from ${replyAddress}`,
+    devDetail: `inbound mail from ${senderLabel}`,
   });
 }
 

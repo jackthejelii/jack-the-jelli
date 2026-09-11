@@ -77,14 +77,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Bad signature" }, { status: 401 });
   }
 
+  // Metadata only. The webhook carries no body and no headers — the message
+  // itself is fetched by `email_id` inside `forwardInboundEmail`.
   let event: {
     type?: string;
     data?: {
-      from?: string;
+      email_id?: string;
       to?: string | string[];
-      subject?: string;
-      text?: string;
-      html?: string;
+      received_for?: string[];
     };
   };
   try {
@@ -101,17 +101,19 @@ export async function POST(request: NextRequest) {
   }
 
   const data = event.data;
-  if (!data?.from) {
-    return NextResponse.json({ error: "No sender" }, { status: 400 });
+  if (!data?.email_id) {
+    return NextResponse.json({ error: "No email_id" }, { status: 400 });
   }
 
   try {
     await forwardInboundEmail({
-      from: data.from,
-      to: Array.isArray(data.to) ? data.to[0] : data.to,
-      subject: data.subject,
-      text: data.text,
-      html: data.html,
+      emailId: data.email_id,
+      // Which of our addresses it was actually sent to, for the label. Prefer
+      // `received_for` over `to`: a message can reach us via Bcc, where `to`
+      // names someone else entirely.
+      to:
+        data.received_for?.[0] ??
+        (Array.isArray(data.to) ? data.to[0] : data.to),
     });
   } catch (error) {
     // Logged and 500'd rather than swallowed: Resend retries a failed webhook,
