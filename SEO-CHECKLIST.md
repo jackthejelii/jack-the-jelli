@@ -27,8 +27,8 @@ Two things about that block worth not undoing:
 - There is **no** `twitter` block, because Next derives `twitter:*` from
   `openGraph` and auto-selects `summary_large_image` when an image is present.
 
-> ⚠️ `public/link-preview.jpg` is currently **untracked**. It must be committed,
-> or the production build has no image to serve and previews break.
+> ✅ `public/link-preview.jpg` is now tracked — `git ls-files` finds it, so the
+> production build has an image to serve.
 
 > ⚠️ The file is 2001×2001 — square, not the 1.91:1 Facebook prefers. Messenger
 > and WhatsApp render it as a large square card (fine); X centre-crops top and
@@ -46,34 +46,35 @@ testing.
 
 ---
 
-## A. SEO plumbing — 🔴 currently missing entirely
+## A. SEO plumbing
 
-### A1. `app/robots.ts`
+### A1. `app/robots.ts` — ✅ done
 
-Does not exist. Without it, every private route is crawlable.
+Disallows `/admin`, `/account`, `/my-orders`, `/checkout`, `/claim`, `/api` and
+the five auth screens, and names the sitemap absolutely.
 
-Must disallow: `/admin`, `/account`, `/my-orders`, `/checkout`, `/claim`,
-`/api`. Must reference the sitemap URL.
+Belt-and-braces, not access control — real enforcement lives in
+`lib/auth-guard.ts`. One interaction worth remembering, written into the file
+itself: a crawler that obeys `Disallow` never fetches the page and so never
+reads that page's `noindex`. The two are not additive, and the meta tags are
+what keeps working if this file is ever removed.
 
-Note this is belt-and-braces, not access control — several of those routes
-already set `robots: { index: false, follow: false }` in their page metadata,
-and real enforcement lives in `lib/auth-guard.ts`. `robots.ts` just stops
-crawlers wasting budget on pages they can never render.
+### A2. `app/sitemap.ts` — ✅ done
 
-### A2. `app/sitemap.ts`
+Generated from MongoDB via `getSitemapProducts` (`features/products/lib/products`),
+which filters `status: "Published"` so Draft and Archived slugs — which 404 on
+the storefront — can never be advertised. `lastModified` comes from each
+document's real `updatedAt`, not from `new Date()`.
 
-Does not exist. Generate it from MongoDB:
+Lists `/`, `/collection`, every published product, then `/track`, `/contact`,
+`/privacy`, `/terms`.
 
-- `/` and `/collection`
-- every product with `status: "Published"` — **Draft and Archived must be
-  excluded**, or Google indexes URLs that 404
-- `/privacy`, `/terms`, `/track`
+The query is `use cache` + `cacheLife("days")`, tagged `CATALOGUE_TAG` and
+invalidated by all five admin product actions — so publishing a piece puts it in
+the sitemap immediately rather than a day later, and a crawler hit doesn't cost
+a round trip to Atlas.
 
-Use `getPublicProducts` from `features/products/lib/products` so the sitemap
-can't drift from what the collection page actually shows. Set `lastModified`
-from the document's `updatedAt`.
-
-### A3. Google Search Console — 🔴
+### A3. Google Search Console — 🔴 **you have to do this one by hand**
 
 1. Verify the domain (a DNS TXT record is the durable option — it survives host
    changes).
@@ -86,71 +87,99 @@ Do **Bing Webmaster Tools** as well — it imports directly from Search Console,
 so it's a two-minute job for a second search engine plus the ChatGPT/Copilot
 surfaces that lean on Bing's index.
 
-### A4. Canonical URLs — 🔴
+### A4. Canonical URLs — ✅ done
 
-`/collection` accepts `q`, `category`, and `sort` search params, which means
-every filter permutation is a distinct crawlable URL serving near-identical
-content. This is the single most common duplicate-content bug on storefronts.
+`/collection` took `q`, `category` and `sort`, so every filter permutation was a
+distinct crawlable URL serving a subset of the same grid —
+`?sort=price-asc&category=wallets` and `?category=wallets&sort=price-asc`
+included, which are the same page twice. Its `metadata` constant is now a
+`generateMetadata` that sets `alternates: { canonical: "/collection" }` on every
+view, filtered or not.
 
-Fix either way:
+Deliberately **not** combined with `robots: { index: false }` on filtered views.
+A canonical and a noindex on the same page are contradictory instructions — one
+says "drop this", the other "credit that" — and Google's own guidance is to pick
+one. The canonical is the one that keeps the links. Filtered views stay
+crawlable, so a product reachable only behind a category filter is still
+reachable.
 
-- set `alternates: { canonical: "/collection" }` on filtered views, **or**
-- set `robots: { index: false, follow: true }` whenever search params are
-  present.
+Canonicals also added to `/`, `/collection/[slug]`, `/track` (which takes
+`?order=…` from confirmation emails), `/contact`, `/privacy` and `/terms`.
+Written relative, resolved against the already-configured `metadataBase`.
 
-`metadataBase` is already configured, so canonicals can be written as relative
-paths.
+`/account` picked up the `robots: { index: false, follow: false }` it was the
+only signed-in page missing.
 
-### A5. Title template — 🟢
+### A5. Title template — ✅ done
 
-Every page hand-writes the `"… | Jack The Jelli"` suffix. Setting
-`title: { default: …, template: "%s | Jack The Jelli" }` in the root layout lets
-pages just say `"The Collections"`. Cosmetic, but it stops the suffix drifting
-as pages get added.
+The root layout now sets
+`title: { default: …, template: "%s | Jack The Jelli" }`, and all fourteen pages
+that hand-wrote the suffix had it stripped. `app/global-error.tsx` keeps its
+full `<title>` — it replaces the root layout, so no template reaches it.
 
 ---
 
-## B. Rich results — 🔴 the actual ecommerce differentiator
+## B. Rich results
 
-### B1. JSON-LD structured data
+### B1. JSON-LD structured data — ✅ done
 
-The codebase currently has **zero** structured data (`grep` for `schema.org`
-returns nothing). This is what makes Google show price and "In stock" _inside_
-the search result rather than just a blue link — the highest-leverage item on
-this list for a product-led store.
+Built in `features/seo/lib/structured-data.ts`, emitted by
+`features/seo/components/JsonLd.tsx`.
 
-Add:
+| Schema                     | Where                   | Notes                                                                        |
+| -------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
+| `Product`                  | `/collection/[slug]`    | one `Offer` per colourway, each with its own `sku` and real `availability`   |
+| `BreadcrumbList`           | product + `/collection` | `/ → The Collections → <piece>`, matching the links the page actually offers |
+| `Organization` + `WebSite` | `/`                     | brand panel + `sameAs` to Instagram; `SearchAction` over `/collection?q=`    |
 
-| Schema                     | Where                      | Notes                                                                                                                |
-| -------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `Product`                  | product pages              | `name`, `image`, `description`, `sku`, `brand`, and an `offers` object with `price`, `priceCurrency`, `availability` |
-| `BreadcrumbList`           | product + collection pages | drives the breadcrumb trail in results                                                                               |
-| `Organization` + `WebSite` | homepage                   | brand panel, sitelinks searchbox                                                                                     |
+One `Product` with an `Offer` per colourway, not one `Product` per colourway:
+there is a single URL and a single price per piece, and the SKU and the "can I
+buy this today" are exactly what an `Offer` carries. Google reads multiple
+offers as a price range, which for identical prices renders as the price. The
+`Organization` and `WebSite` nodes carry stable `@id`s that the offers'
+`seller` references, so the pages read as one site.
 
-`models/Product.ts` already carries every field needed — `name`, `slug`, `sku`,
-`price`, `description`, `stock`, `category`, `images`. Derive `availability`
-from `stock > 0`.
+Rendered from the server component, not from `ProductDetailView` — it has to be
+in the prerendered HTML for a crawler that runs no JavaScript.
 
-**Do not add `aggregateRating` until you have genuine reviews.** Fabricated
-review markup is a manual-action risk, and a manual action costs far more to
-undo than the rich result was ever worth.
+**No `aggregateRating`**, per the original note, and the rule is written into
+the module so it survives the next person who reads it.
+
+Two recommended properties are knowingly absent, and both surface as _warnings_
+(not errors) in the Rich Results Test:
+
+- `priceValidUntil` — nothing expires these prices, and a date invented to
+  silence a warning is markup asserting a decision the business hasn't made.
+- `hasMerchantReturnPolicy` / `shippingDetails` — **worth adding, blocked on
+  D4.** Declaring a 7-day window and a delivery charge in markup before the
+  site states them on a page a customer can read is the wrong order.
 
 Validate with the
-[Rich Results Test](https://search.google.com/test/rich-results).
+[Rich Results Test](https://search.google.com/test/rich-results) once deployed —
+it needs a public URL.
 
-### B2. Per-product OG images — 🟡
+### B2. Per-product OG images — ✅ done
 
-Right now every shared product link shows the brand card. In the product's
-`generateMetadata` (`app/(storefront)/collection/[slug]/page.tsx`), set
-`openGraph.images` from `product.thumbnail`.
+`features/seo/lib/social-card.ts` rewrites a stored Cloudinary URL into
+`c_pad,b_white,w_1200,h_630,f_jpg,q_auto`, and the product's `generateMetadata`
+sets it as `openGraph.images`. Verified end to end: the transformed URL returns
+`200 image/jpeg` at ~22 KB, comfortably under the few-hundred-KB ceiling above
+which WhatsApp silently drops a preview.
 
-No new assets needed — Cloudinary can do the crop as a URL transform:
-`c_pad,b_white,w_1200,h_630`. That pads to 1.91:1 on white, which matches the
-product photography spec in `CLAUDE.md` (seamless white background) rather than
-fighting it.
+**This is a delivery-time transform, not an upload-time one.** The stored bytes
+are untouched, which is what `CLAUDE.md`'s rule is about. `c_pad` rather than
+`c_fill` for the same reason `ProductCard` uses `object-contain` — a 1:1 shot
+cropped to 1.91:1 loses the top and bottom of the wallet.
 
-For a store where people share individual wallets into Messenger and WhatsApp
-chats, this is high-leverage and cheap.
+Two traps handled, worth not undoing:
+
+- `openGraph` is **replaced** wholesale by the last segment that declares it,
+  never merged. A piece with no usable photograph therefore omits the key
+  entirely rather than declaring an empty one, which would have deleted the
+  root layout's brand card instead of falling back to it.
+- `f_jpg`, not `f_auto`. Scrapers are not browsers; several send no usable
+  `Accept` header and simply fail on AVIF or WebP, which reads as a link with
+  no image at all.
 
 ### B3. Google Merchant Center — 🟡
 
@@ -179,13 +208,43 @@ Without this you're optimising blind.
 
 ## D. Hardening & cleanup
 
-### D1. 🔴 Cloudinary remote pattern is unrestricted
+### D1. ✅ done — remote patterns are now scoped
 
-`next.config.ts` allows `hostname: "res.cloudinary.com"` with **no `pathname`
-constraint**. Anyone can pipe any Cloudinary account's images through your Next
-image optimizer and bill the transformations to you.
+`next.config.ts` allowed `hostname: "res.cloudinary.com"` with no `pathname`
+constraint, and `res.cloudinary.com` hosts every Cloudinary customer — so the
+rule was not a constraint at all. Anyone could point `/_next/image?url=…` at any
+account on that host and have the transformations computed and billed here.
 
-Add `pathname: "/<your-cloud-name>/**"`.
+Both entries are now scoped by `pathname` **and** `search`:
+
+- `res.cloudinary.com` → `/${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/**`
+- `lh3.googleusercontent.com` → `/aida-public/**` (see D2)
+
+The cloud name is read from the environment rather than written out as a
+literal, because `docs/CLIENT-HANDOVER.md` moves the site to the client's own
+Cloudinary account — a hardcoded name would survive that move silently and then
+break every product photograph. Verified that Next loads `.env*` before
+evaluating `next.config.ts`, so the variable is populated there. It **throws**
+if unset: `"/undefined/**"` would break every image with a 400 pointing nowhere
+near the cause, and omitting `pathname` would reopen the hole.
+
+`search: ""` blocks query strings. No stored Cloudinary URL has one, and an
+unconstrained `search` lets a URL be varied endlessly to defeat the optimizer's
+cache — the same billing problem by another route.
+
+Verified against a production server:
+
+| request                                                     | result                |
+| ----------------------------------------------------------- | --------------------- |
+| own account's image                                         | 200                   |
+| `res.cloudinary.com/demo/…` (other account)                 | **400** — hole closed |
+| own image with `?v=2` appended                              | **400**               |
+| `lh3.googleusercontent.com/aida-public/…`                   | 200                   |
+| any other `lh3.googleusercontent.com` path                  | **400**               |
+| every optimized image on `/`, `/collection`, a product page | 200, 0 failures       |
+
+Google OAuth avatars need no entry — `UserMenu` renders them through a plain
+`<img>`, not `next/image`, so they never touch the optimizer.
 
 ### D2. 🔴 Placeholder images still live on the homepage
 
@@ -194,27 +253,41 @@ production at `w=3840`. These are AI-mockup placeholders — they will disappear
 without warning, and they're hurting LCP right now.
 
 Replace them with real Cloudinary assets, then drop the
-`lh3.googleusercontent.com` entry from `next.config.ts` entirely.
+`lh3.googleusercontent.com` entry from `next.config.ts` entirely. D1 scoped that
+entry to `/aida-public/**` in the meantime; deleting it outright is still the
+endpoint.
 
-### D3. 🟡 Security headers
+### D3. 🟡 Security headers — mostly done
 
-Add via `headers()` in `next.config.ts`: HSTS, `X-Content-Type-Options: nosniff`,
-`Referrer-Policy`, and a Content-Security-Policy. A store collecting delivery
-addresses and phone numbers should have these, and they're flagged by the basic
-security scanners a client might run.
+`headers()` in `next.config.ts` now sets HSTS (two years, subdomains, no
+`preload`), `X-Content-Type-Options: nosniff`, `X-Frame-Options`,
+`Referrer-Policy` and `X-DNS-Prefetch-Control`.
+
+Still outstanding: **Content-Security-Policy**. Deliberately not written blind —
+this app loads images from Cloudinary and Google's avatar CDN and runs Google
+OAuth, so a policy written without measuring the real request set breaks sign-in
+rather than hardening anything. Do it as its own change with a report-only
+rollout first.
 
 ### D4. 🔴 Missing commerce pages
 
-`/privacy` and `/terms` exist. A real store also needs:
+`/privacy`, `/terms` and `/contact` exist — `/contact` shipped since this list
+was written, with a form, the FAQ and a real phone number.
+
+Still missing:
 
 - **Returns / Refunds policy**
 - **Shipping policy** (delivery windows, coverage, charges)
-- **Contact** page with a real way to reach a human
 
-Merchant Center requires these (B3), and their absence is a visible trust gap
-right at the point of checkout. Follow the existing pattern —
-`features/legal/components/LegalDocument` with content in
+Merchant Center requires these (B3), they are a visible trust gap right at the
+point of checkout, and they are what unblocks the `hasMerchantReturnPolicy` and
+`shippingDetails` left out of the product markup in B1. Follow the existing
+pattern — `features/legal/components/LegalDocument` with content in
 `features/legal/lib/legal-info.ts`.
+
+⚠️ Confirm the numbers first. `LEGAL_INFO.returnWindowDays` is still marked
+`TODO`, and a returns window is not something to guess at in markup Google
+reads.
 
 ### D5. 🟢 `app/manifest.ts`
 
@@ -233,10 +306,21 @@ are the other half.
 
 ## Suggested order
 
-1. **D1, D2, D6** — active liabilities (billing abuse, images that will vanish,
-   mail landing in spam).
-2. **A1, A2, A4** — the plumbing, so crawling starts from a correct picture.
-3. **A3** — verify and submit, then let it index while you do the rest.
-4. **B1, B2** — rich results and shareable product cards.
-5. **D4** — unblocks B3.
-6. **C, B3, D3, D5, A5** — growth and polish.
+**Done:** A1, A2, A4, A5, B1, B2 — the whole code half of the SEO work — plus
+D1. All verified against a production build; none of the search-facing half can
+be checked against Google until the site is deployed.
+
+**Next, in this order:**
+
+1. **D2, D6** — the remaining active liabilities, and neither is SEO work anyone
+   can do from inside the app's metadata. Homepage images that will vanish
+   without warning, and order confirmations landing in spam. (**D1** is done.)
+2. **A3** — verify in Search Console and submit `/sitemap.xml`. This cannot
+   happen before the first production deploy, and everything above is waiting on
+   it to show whether it worked. Run the product URL through the
+   [Rich Results Test](https://search.google.com/test/rich-results) and a shared
+   link through the
+   [Sharing Debugger](https://developers.facebook.com/tools/debug/) at the same
+   time — those are the checks B1 and B2 are still owed.
+3. **D4** — unblocks B3, and unblocks the two `Offer` properties B1 left out.
+4. **C, B3, D3's CSP, D5** — measurement, then growth and polish.

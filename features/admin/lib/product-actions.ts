@@ -3,7 +3,10 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { Types } from "mongoose";
-import { FEATURED_PRODUCTS_TAG } from "@/features/products/lib/constants";
+import {
+  CATALOGUE_TAG,
+  FEATURED_PRODUCTS_TAG,
+} from "@/features/products/lib/constants";
 import { requireAdmin } from "@/lib/auth-guard";
 import { CLOUDINARY_UPLOAD_FOLDER, deleteImage } from "@/lib/cloudinary";
 import { connectDB } from "@/lib/db";
@@ -249,6 +252,9 @@ export async function createProduct(
   // what is featured, published, named or priced — not just on the flag.
   revalidatePath("/");
   revalidateTag(FEATURED_PRODUCTS_TAG, "max");
+  // Keeps /sitemap.xml honest: publishing, archiving or renaming a piece
+  // changes what the crawler should be told about. See CATALOGUE_TAG.
+  revalidateTag(CATALOGUE_TAG, "max");
   // redirect() throws by design — it must stay outside the try/catch (§6.6).
   redirect("/admin/products");
 }
@@ -356,6 +362,9 @@ export async function updateProduct(
   revalidatePath(`/admin/products/${id}`);
   revalidatePath("/");
   revalidateTag(FEATURED_PRODUCTS_TAG, "max");
+  // Keeps /sitemap.xml honest: publishing, archiving or renaming a piece
+  // changes what the crawler should be told about. See CATALOGUE_TAG.
+  revalidateTag(CATALOGUE_TAG, "max");
   redirect("/admin/products");
 }
 
@@ -409,6 +418,9 @@ export async function setProductFeatured(
   revalidatePath(`/admin/products/${parsed.data.id}`);
   revalidatePath("/");
   revalidateTag(FEATURED_PRODUCTS_TAG, "max");
+  // Keeps /sitemap.xml honest: publishing, archiving or renaming a piece
+  // changes what the crawler should be told about. See CATALOGUE_TAG.
+  revalidateTag(CATALOGUE_TAG, "max");
   return {
     ok: true,
     message: parsed.data.featured
@@ -456,6 +468,9 @@ export async function archiveProduct(
   // A featured product that leaves Published has to leave the homepage too.
   revalidatePath("/");
   revalidateTag(FEATURED_PRODUCTS_TAG, "max");
+  // Keeps /sitemap.xml honest: publishing, archiving or renaming a piece
+  // changes what the crawler should be told about. See CATALOGUE_TAG.
+  revalidateTag(CATALOGUE_TAG, "max");
   return { ok: true, message: "Product archived." };
 }
 
@@ -496,5 +511,8 @@ export async function restoreProduct(
   // A featured product that leaves Published has to leave the homepage too.
   revalidatePath("/");
   revalidateTag(FEATURED_PRODUCTS_TAG, "max");
+  // Keeps /sitemap.xml honest: publishing, archiving or renaming a piece
+  // changes what the crawler should be told about. See CATALOGUE_TAG.
+  revalidateTag(CATALOGUE_TAG, "max");
   return { ok: true, message: "Product restored to Draft." };
 }

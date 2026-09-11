@@ -3,7 +3,11 @@ import { requireAuth } from "@/lib/auth-guard";
 import AccountForm from "@/features/account/components/AccountForm";
 
 export const metadata: Metadata = {
-  title: "Account | Jack The Jelli",
+  title: "Account",
+  // The one signed-in page that was missing this. Everything on it belongs to
+  // one person; robots.txt already disallows the path, and this is the half
+  // that survives someone linking straight to it.
+  robots: { index: false, follow: false },
 };
 
 export default async function AccountPage() {

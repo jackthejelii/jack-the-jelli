@@ -3,9 +3,10 @@ import LegalDocument from "@/features/legal/components/LegalDocument";
 import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Jack The Jelli",
+  title: "Privacy Policy",
   description:
     "What Jack The Jelli collects when you shop, why we hold it, who processes it, and how to ask for a copy or its deletion.",
+  alternates: { canonical: "/privacy" },
 };
 
 /**

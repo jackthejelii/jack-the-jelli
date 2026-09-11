@@ -9,6 +9,17 @@ import {
   getPrebuildableProductSlugs,
   getPublicProductBySlug,
 } from "@/features/products/lib/products";
+import JsonLd from "@/features/seo/components/JsonLd";
+import {
+  SOCIAL_CARD_HEIGHT,
+  SOCIAL_CARD_WIDTH,
+  toSocialCardUrl,
+} from "@/features/seo/lib/social-card";
+import {
+  breadcrumbSchema,
+  productSchema,
+} from "@/features/seo/lib/structured-data";
+import { SITE_NAME } from "@/lib/site";
 
 /**
  * Registers this segment as prerenderable — `revalidate` alone would leave it
@@ -41,14 +52,52 @@ export async function generateMetadata({
   const product = await getPublicProductBySlug(slug);
 
   if (!product) {
-    return { title: "Piece not found | Jack The Jelli" };
+    // No canonical and no card: this renders as a 404, and pointing a canonical
+    // at a URL that doesn't resolve is worse than pointing at nothing.
+    return { title: "Piece not found" };
   }
 
+  const description =
+    product.description ??
+    `${product.name} from the ${product.category} collection. Built for daily carry, and for the odd second glance.`;
+
+  // The first colourway's first photograph — what the page itself opens on.
+  const card = toSocialCardUrl(product.variants[0]?.images[0]?.url);
+
   return {
-    title: `${product.name} | Jack The Jelli`,
-    description:
-      product.description ??
-      `${product.name} from the ${product.category} collection. Built for daily carry, and for the odd second glance.`,
+    title: product.name,
+    description,
+    // Relative, resolved against `metadataBase`. Products are reachable from
+    // the grid, from search and from the related rail, and a shared link
+    // regularly picks up a tracking param on the way into a chat — every one of
+    // those is this URL.
+    alternates: { canonical: `/collection/${product.slug}` },
+    // Present only when there is a card to show. `openGraph` is *replaced*
+    // wholesale by the last segment that declares it, never merged — so an
+    // `openGraph: {}` on a piece with no usable photograph would not fall back
+    // to the root layout's brand card, it would delete it. Omitting the key
+    // entirely is what inherits.
+    //
+    // `siteName` and `type` are restated for the same reason: overriding the
+    // image means overriding the whole block. `title` and `description` are
+    // still left out deliberately, so Next fills og:title/og:description from
+    // the two above rather than from a second copy kept in step by hand.
+    ...(card
+      ? {
+          openGraph: {
+            type: "website" as const,
+            siteName: SITE_NAME,
+            images: [
+              {
+                url: card,
+                width: SOCIAL_CARD_WIDTH,
+                height: SOCIAL_CARD_HEIGHT,
+                alt: product.name,
+              },
+            ],
+          },
+        }
+      : {}),
   };
 }
 
@@ -79,6 +128,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   return (
     <>
+      {/* Rendered here rather than inside ProductDetailView, which is a client
+          component: this has to be in the prerendered HTML for a crawler that
+          runs no JavaScript, and it describes the piece as a whole — a swatch
+          click changes which colour is on screen, not which product this is.
+          The Offer for every colourway is already in the markup. */}
+      <JsonLd schema={productSchema(product)} />
+      <JsonLd
+        schema={breadcrumbSchema([
+          { name: "Home", path: "/" },
+          { name: "The Collections", path: "/collection" },
+          // The trail the page actually offers — ProductDetailView opens with a
+          // link back to /collection, so this is a description of the site, not
+          // a hierarchy invented for the markup.
+          { name: product.name, path: `/collection/${product.slug}` },
+        ])}
+      />
       <ProductDetailView product={product} />
       {/* Streams in after the piece itself — the suggestions never hold up
           first paint. */}

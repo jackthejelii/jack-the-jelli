@@ -9,7 +9,7 @@ import { getOrderForUser } from "@/features/orders/lib/orders";
 import { PAYMENT_STATUS_COPY } from "@/features/orders/lib/order-status";
 
 export const metadata: Metadata = {
-  title: "Order | Jack The Jelli",
+  title: "Order",
   robots: { index: false, follow: false },
 };
 

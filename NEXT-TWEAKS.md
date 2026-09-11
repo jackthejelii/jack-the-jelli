@@ -10,13 +10,16 @@ here) and `docs/CLIENT-HANDOVER.md` (accounts, domain, DNS).
 
 ## Priority
 
-### 1. A real contact feature
+### ~~1. A real contact feature~~ — done
 
-There is no way for a customer to reach the shop. The email and phone number
-exist only as inline text buried inside `/privacy` and `/terms` — no contact
-page, no form, no link in the footer, no social handles anywhere on the site.
-For a cash-on-delivery storefront where the confirmation call is part of the
-flow, "how do I ask a question before I order" currently has no answer.
+`/contact` ships a form (`features/contact/`), backed by its own `Contact`
+model and a rate-limited, honeypot-guarded Server Action. The message is
+stored first and always; the shop notification email
+(`sendContactNotificationEmail` in `lib/email.ts`) is a best-effort
+convenience layered on top, sent to `SUPPORT_EMAIL` with `replyTo` set to the
+customer's own address. `Contact` is now in the nav bar, the mobile drawer,
+and the footer carries the Instagram handle — nothing points only at
+`/privacy` or `/terms` for this anymore.
 
 ### 2. Make the homepage live, not static
 
@@ -91,9 +94,6 @@ field), and nothing caps how many products an admin can flag beyond
       with a `TODO` to replace them. They are third-party URLs on someone
       else's CDN — they can break without notice, and they are not the actual
       product. Real photography is overdue.
-- [ ] **The footer is a dead end.** The logo links to `#`, and the only links
-      are Privacy and Terms. No contact, no social, no shipping/returns, no
-      collection link.
 - [ ] **No social proof anywhere** — no reviews, testimonials, or customer
       photos on a product page a first-time buyer is deciding from.
 - [ ] **Shipping and returns deserve their own page.** The terms page covers
@@ -109,11 +109,11 @@ field), and nothing caps how many products an admin can flag beyond
 - [ ] **Sale pricing and tags are invisible.** `comparePrice` and `tags` exist
       on the product schema with no form control and no storefront display, so
       there is no way to run a discount or group products beyond category.
-- [ ] **The product image has no loading state.** On the detail page the gallery
-      box is just page background until the Cloudinary image decodes, so a slow
-      connection shows an empty square with nothing to say a photo is on its
-      way — on a page whose whole job is the photograph. `ProductCard` has the
-      same gap.
+- [x] ~~The product image has no loading state.~~ — done. `ProductImage`
+      (`features/products/components/ProductImage.tsx`) now shows the site's
+      skeleton-sweep placeholder until the `<Image>` fires `onLoad`/`onError`,
+      then fades the photograph up; `ProductCard` and `ProductGallery` both use
+      it.
 - [ ] **The avatar pops in twice.** While the session resolves, `UserMenu`
       renders an empty 32px gap; the moment it resolves the Radix fallback
       paints the initials, then the Google-hosted photo replaces them when it

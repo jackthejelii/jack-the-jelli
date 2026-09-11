@@ -74,4 +74,4 @@ The other image surfaces are **deliberately still 4:5 or fixed-size** and were l
 
 **Env vars** (`.env.local`, gitignored — `.env.example` lists the full set): `MONGODB_URI`, `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `NEXT_PUBLIC_CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `DEV_INBOX`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
-**`docs/`** is gitignored (local notes, not shared via git) but present in this checkout: `docs/CLIENT-HANDOVER.md` covers standing the site up on the client's own accounts, `docs/EMAIL-SENDER-PLAN.md` covers outbound mail addressing, and `docs/QA-AUDIT-{PROMPT,REPORT}.md` are the reusable pre-deploy audit and its last result.
+**`docs/`** is gitignored (local notes, not shared via git) but present in this checkout: `docs/CLIENT-HANDOVER.md` covers standing the site up on the client's own accounts, `docs/EMAIL-SENDER-PLAN.md` covers outbound mail addressing, and `docs/QA-AUDIT-PROMPT.md` is the reusable pre-deploy audit brief — run it fresh rather than trusting a stale prior result.

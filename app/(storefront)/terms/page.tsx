@@ -3,9 +3,10 @@ import LegalDocument from "@/features/legal/components/LegalDocument";
 import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Jack The Jelli",
+  title: "Terms of Service",
   description:
     "The terms you agree to when you order from Jack The Jelli: ordering, cash on delivery, delivery across Bangladesh, cancellations and returns.",
+  alternates: { canonical: "/terms" },
 };
 
 /**

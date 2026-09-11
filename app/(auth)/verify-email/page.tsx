@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth-guard";
 import VerifyEmailNotice from "@/features/auth/components/VerifyEmailNotice";
 
 export const metadata: Metadata = {
-  title: "Verify Email | Jack The Jelli",
+  title: "Verify Email",
 };
 
 interface VerifyEmailPageProps {

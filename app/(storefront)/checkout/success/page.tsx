@@ -10,7 +10,7 @@ import {
 } from "@/features/orders/lib/orders";
 
 export const metadata: Metadata = {
-  title: "Order Confirmed | Jack The Jelli",
+  title: "Order Confirmed",
   robots: { index: false, follow: false },
 };
 

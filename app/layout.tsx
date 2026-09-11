@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import RouteProgress from "@/components/layout/RouteProgress";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const garamond = EB_Garamond({
   variable: "--font-garamond",
@@ -18,18 +19,24 @@ const inter = Inter({
   weight: ["400", "600"],
 });
 
-const SITE_URL = "https://jackthejelli.com";
-
 export const metadata: Metadata = {
   // Lets `openGraph.images` (and any `alternates.canonical` added per page)
   // be written as a relative path — Next resolves them against this origin.
   metadataBase: new URL(SITE_URL),
-  title: "Jack The Jelli | They’re jelly of the gear",
+  title: {
+    // What `/` and any page that declares no title of its own renders.
+    default: "Jack The Jelli | They’re jelly of the gear",
+    // Every child page now supplies only its own name — "The Collections",
+    // "Contact", a product's name — and the brand is appended here. Pages used
+    // to hand-write the suffix, which worked until one of them forgot to.
+    // `absolute` is still available to any page that needs to opt out.
+    template: `%s | ${SITE_NAME}`,
+  },
   description:
     "Handmade leather wallets built for daily carry and the occasional second look. Pull one out and watch the table go quietly jelly.",
   openGraph: {
     type: "website",
-    siteName: "Jack The Jelli",
+    siteName: SITE_NAME,
     // Deliberately no `title`/`description`/`url` here. `openGraph` is
     // inherited wholesale by any page that doesn't declare its own, so setting
     // them would stamp the homepage's copy onto every shared product link.

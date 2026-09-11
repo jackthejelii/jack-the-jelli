@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth-guard";
 import ForgotPasswordForm from "@/features/auth/components/ForgotPasswordForm";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | Jack The Jelli",
+  title: "Forgot Password",
 };
 
 export default async function ForgotPasswordPage() {

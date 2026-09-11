@@ -6,7 +6,7 @@ import { hasReceiptFor } from "@/features/checkout/lib/receipt";
 import { getOrderByNumber } from "@/features/orders/lib/orders";
 
 export const metadata: Metadata = {
-  title: "Create Account | Jack The Jelli",
+  title: "Create Account",
 };
 
 interface RegisterPageProps {

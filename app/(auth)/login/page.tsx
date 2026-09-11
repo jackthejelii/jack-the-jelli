@@ -5,7 +5,7 @@ import LoginForm from "@/features/auth/components/LoginForm";
 import { safeRedirectPath } from "@/features/auth/lib/redirect";
 
 export const metadata: Metadata = {
-  title: "Sign In | Jack The Jelli",
+  title: "Sign In",
 };
 
 interface LoginPageProps {

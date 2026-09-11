@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import TrackOrderForm from "@/features/orders/components/TrackOrderForm";
 
 export const metadata: Metadata = {
-  title: "Track Your Order | Jack The Jelli",
+  title: "Track Your Order",
   description:
     "Drop in your order number and the phone number you gave, and we’ll show you exactly where your gear is, and how long until the compliments start.",
+  // `?order=…` prefills the form from a link in a confirmation email, so this
+  // page has as many URLs as there are orders. They are all one page.
+  alternates: { canonical: "/track" },
 };
 
 /**

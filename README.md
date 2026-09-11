@@ -69,7 +69,8 @@ there is no npm script for it.
 
 **There is no test suite.** No test script, no test files, no framework
 installed. Don't assume one exists — verification is reading, `npm run build`,
-and manual QA (`docs/QA-AUDIT-REPORT.md` is the last full pass).
+and manual QA (`docs/QA-AUDIT-PROMPT.md` is the reusable pre-deploy audit
+brief — run it fresh rather than trusting a stale prior result).
 
 > Scope `prettier --write` to the files you actually edited; running it over the
 > whole directory rewrites CRLF → LF and dirties the entire tree.
@@ -97,6 +98,7 @@ features/
   auth/       login/register/reset forms + schemas
   cart/       zustand store, cart sheet, server sync
   checkout/   checkout form, delivery zones, placeOrder, receipt cookie
+  contact/    contact form, schema, Server Action, FAQ + channels
   homepage/   hero, product section, featured strip, footer
   legal/      privacy + terms documents
   orders/     order state machine, receipts, timeline, /track form
@@ -104,15 +106,15 @@ features/
 
 components/
   ui/         shadcn primitives ONLY (added via `npx shadcn@latest add`)
-  layout/     NavBar, UserMenu, Logo, AppLink, PageFade, RouteProgress,
-              MessageScreen
+  layout/     NavBar, MobileNav, UserMenu, Logo, AppLink, InstagramIcon,
+              nav-links.ts, PageFade, RouteProgress, MessageScreen
 
 lib/          auth.ts auth-guard.ts auth-client.ts db.ts users.ts email.ts
               cloudinary.ts rate-limit.ts mongo-errors.ts slug.ts utils.ts
-models/       Cart.ts Category.ts Order.ts Product.ts index.ts
+models/       Cart.ts Category.ts Contact.ts Order.ts Product.ts index.ts
 proxy.ts      Next 16 proxy (replaces middleware.ts)
 public/       hero-image.webp, logo.svg/png, link-preview.jpg, image-placeholder.jpg
-docs/         gitignored local notes: designs/, client handover, QA audit
+docs/         gitignored local notes: media-masters/, client handover, QA audit
 ```
 
 When you add a page, put its logic in the matching `features/` folder — not
@@ -521,7 +523,6 @@ is encouraged. No worktrees in this repo.
 | `AUTH_IMPLEMENTATION_PLAN.md` | The auth spec — code comments cite its § numbers              |
 | `docs/CLIENT-HANDOVER.md`     | Standing the site up on the client's own accounts, end to end |
 | `docs/EMAIL-SENDER-PLAN.md`   | How outbound mail is addressed, and what's deferred           |
-| `docs/QA-AUDIT-PROMPT.md`     | Reusable pre-deploy QA audit brief                            |
-| `docs/QA-AUDIT-REPORT.md`     | The last full pre-deploy QA pass                              |
+| `docs/QA-AUDIT-PROMPT.md`     | Reusable pre-deploy QA audit brief — run fresh before launch  |
 
 `docs/` is gitignored — local planning notes, present in this checkout only.

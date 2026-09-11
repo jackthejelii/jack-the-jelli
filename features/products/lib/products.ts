@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { escapeRegex } from "@/lib/slug";
 import { Category, Product, type IProduct } from "@/models";
 import {
+  CATALOGUE_TAG,
   CATEGORY_SUGGESTION_LIMIT,
   DEFAULT_SORT,
   FEATURED_LIMIT,
@@ -11,6 +12,7 @@ import {
   PRERENDER_LIMIT,
   PRODUCTS_PER_PAGE,
   SEARCH_MIN_CHARS,
+  SITEMAP_LIMIT,
   SUGGESTION_LIMIT,
   type SortOption,
 } from "@/features/products/lib/constants";
@@ -459,6 +461,49 @@ export async function getPublicProductBySlug(
     .lean<LeanProduct | null>();
 
   return product ? toProductDetail(product) : null;
+}
+
+export interface SitemapProduct {
+  slug: string;
+  /** Feeds `lastModified`; absent on documents written before `timestamps`. */
+  updatedAt?: Date;
+}
+
+/**
+ * Every product `app/sitemap.ts` is allowed to advertise.
+ *
+ * The `status: "Published"` filter is the whole point: a Draft or an Archived
+ * slug 404s on the storefront (see getPublicProductBySlug), so listing one in
+ * the sitemap is an explicit invitation for Google to crawl a dead URL and
+ * report the site as serving soft 404s. Any change to what "live" means has to
+ * land here as well as in the query helpers above.
+ *
+ * Cached rather than read per request for the same reason getFeaturedProducts
+ * is: under Cache Components a metadata route is prerendered unless something
+ * in it reaches for uncached data, and a sitemap nobody but a crawler reads is
+ * not worth a round trip to Atlas on every hit. A day is the right staleness —
+ * `CATALOGUE_TAG` is invalidated by the admin product actions, so publishing a
+ * piece puts it in the sitemap immediately rather than tomorrow.
+ */
+export async function getSitemapProducts(
+  limit: number = SITEMAP_LIMIT,
+): Promise<SitemapProduct[]> {
+  "use cache";
+  cacheTag(CATALOGUE_TAG);
+  cacheLife("days");
+
+  await connectDB();
+
+  const products = await Product.find({ status: "Published" })
+    .sort({ updatedAt: -1, _id: -1 })
+    .limit(limit)
+    .select("slug updatedAt")
+    .lean<{ slug: string; updatedAt?: Date }[]>();
+
+  // Rebuilt field by field rather than returned as-is: `lean()` still hands
+  // back `_id` as an ObjectId, and a `use cache` boundary serializes what
+  // crosses it — an ObjectId throws there. Dates survive; ObjectIds do not.
+  return products.map(({ slug, updatedAt }) => ({ slug, updatedAt }));
 }
 
 /**

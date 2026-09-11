@@ -85,3 +85,22 @@ export const PRERENDER_LIMIT = 24;
  * the front page until the cache aged out on its own.
  */
 export const FEATURED_PRODUCTS_TAG = "featured-products";
+
+/**
+ * Products `app/sitemap.ts` will list. A guard rail, not a target: the protocol
+ * caps a single sitemap at 50,000 URLs, and a catalogue anywhere near this
+ * number needs splitting via `generateSitemaps` rather than a bigger constant.
+ */
+export const SITEMAP_LIMIT = 5000;
+
+/**
+ * Cache tag for "which products are published, and when did each last change" —
+ * the only question `app/sitemap.ts` asks.
+ *
+ * Separate from FEATURED_PRODUCTS_TAG because the two answer to different
+ * events. The featured strip cares about a flag; the sitemap cares about
+ * publication, and about the `updatedAt` it reports as `lastModified`. They are
+ * invalidated from the same places today, but a tag named for the strip would
+ * be the wrong thing to reach for the day the sitemap grows a second reader.
+ */
+export const CATALOGUE_TAG = "published-catalogue";

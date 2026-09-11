@@ -5,7 +5,7 @@ import OrderHistoryList from "@/features/orders/components/OrderHistoryList";
 import { getOrdersForUser } from "@/features/orders/lib/orders";
 
 export const metadata: Metadata = {
-  title: "My Orders | Jack The Jelli",
+  title: "My Orders",
   robots: { index: false, follow: false },
 };
 

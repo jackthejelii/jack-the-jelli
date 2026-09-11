@@ -5,9 +5,10 @@ import ContactFaq from "@/features/contact/components/ContactFaq";
 import ContactForm from "@/features/contact/components/ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contact | Jack The Jelli",
+  title: "Contact",
   description:
     "Send Jack The Jelli a message and we will reply within 24 hours, or call us. Answers to the common questions about delivery, payment and returns.",
+  alternates: { canonical: "/contact" },
 };
 
 /**

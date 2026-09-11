@@ -1,5 +1,31 @@
 import type { NextConfig } from "next";
 
+/**
+ * The Cloudinary account whose images this app's optimizer is allowed to fetch.
+ *
+ * Read from the environment rather than written out as a literal, because the
+ * cloud name changes: docs/CLIENT-HANDOVER.md stands the site up on the
+ * client's own Cloudinary account, and a hardcoded name would survive that
+ * move silently and then break every product photograph in production.
+ *
+ * Verified that this works: Next loads `.env*` before evaluating this file, so
+ * the variable is populated here the same way it is in `lib/cloudinary.ts`.
+ *
+ * Throws rather than falling back. The two available fallbacks are both worse
+ * than a failed build — `"/undefined/**"` breaks every image with a 400 that
+ * points nowhere near the cause, and omitting `pathname` reopens exactly the
+ * hole this exists to close. Loud and early matches how the rest of the build
+ * already treats missing infrastructure (see getPrebuildableProductSlugs).
+ */
+const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+if (!CLOUDINARY_CLOUD_NAME) {
+  throw new Error(
+    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is not set — next.config.ts needs it to " +
+      "scope the image optimizer to your own Cloudinary account. See .env.example.",
+  );
+}
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
 
@@ -12,14 +38,47 @@ const nextConfig: NextConfig = {
     // largest byte saving available. It costs more CPU to encode, but only on
     // the first request for a given size; every later hit is a cache read.
     formats: ["image/avif", "image/webp"],
+    /**
+     * Every entry is scoped by `pathname` and `search`, not just by hostname.
+     *
+     * Next's own docs are blunt about why: an omitted `pathname` means an
+     * implied `**`, and a hostname-only rule on a shared CDN lets anyone point
+     * `/_next/image?url=…` at *any* account on that host. The transformations
+     * are then computed and billed on this project. `res.cloudinary.com` hosts
+     * every Cloudinary customer, so "trust the hostname" is not a constraint at
+     * all — it is an open proxy with an invoice attached.
+     *
+     * `search: ""` blocks query strings outright. No URL this app stores has
+     * one (a Cloudinary `secure_url` is all path), and leaving it open is the
+     * other half of the same hole — the docs call out that an unconstrained
+     * `search` lets a URL be varied endlessly to defeat the optimizer's cache.
+     * If a cache-buster is ever genuinely needed, it will fail loudly with a
+     * 400 rather than quietly costing money.
+     *
+     * Note this governs the *optimizer* only. The link-preview cards in
+     * features/seo/lib/social-card.ts are absolute URLs in meta tags that
+     * social scrapers fetch directly from Cloudinary, so they never pass
+     * through here.
+     */
     remotePatterns: [
       {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
+        // The AI-mockup placeholders in ProductSection.tsx, and nothing else.
+        // Google avatars don't need an entry — UserMenu renders them through a
+        // plain <img>, not next/image, so they bypass the optimizer entirely.
+        //
+        // This whole entry goes away with SEO-CHECKLIST.md D2, which replaces
+        // those placeholders with real Cloudinary assets. Scoped rather than
+        // left open in the meantime: same billing hole, same one-line fix.
+        pathname: "/aida-public/**",
+        search: "",
       },
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+        pathname: `/${CLOUDINARY_CLOUD_NAME}/**`,
+        search: "",
       },
     ],
   },

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ResetPasswordForm from "@/features/auth/components/ResetPasswordForm";
 
 export const metadata: Metadata = {
-  title: "Reset Password | Jack The Jelli",
+  title: "Reset Password",
 };
 
 interface ResetPasswordPageProps {
