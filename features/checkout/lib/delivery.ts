@@ -123,7 +123,7 @@ const INSIDE_DHAKA_DISTRICTS = new Set(["Dhaka"]);
  * shopper reaches checkout, without restating the number and letting the two
  * drift. `DELIVERY_FEES` stays the thing pricing reads.
  */
-export const DELIVERY_FEE_INSIDE_DHAKA = 60;
+export const DELIVERY_FEE_INSIDE_DHAKA = 70;
 export const DELIVERY_FEE_OUTSIDE_DHAKA = 120;
 
 const DELIVERY_FEES: Record<DeliveryZone, number> = {
