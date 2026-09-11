@@ -26,6 +26,7 @@ export interface VariantPayload {
   id?: string;
   color: string;
   hex: string;
+  /** Empty for a colour with no code yet — the model mints one on save. */
   sku: string;
   stock: number;
   images: ProductImageValue[];
@@ -119,12 +120,17 @@ function seedRows(
 }
 
 /**
- * The colour editor: a repeatable row per colourway, each with its own SKU,
- * stock count and set of photographs.
+ * The colour editor: a repeatable row per colourway, each with its own stock
+ * count and set of photographs.
  *
  * This is where the shape of the data model shows up in the UI. A colour is not
  * a label on a product — it is the thing with a SKU, a shelf count and a photo
  * shoot — so the form gives each one a card rather than a field.
+ *
+ * The SKU is the one field here nobody types. It is minted on save by the
+ * model's pre("validate") hook and only displayed afterwards, in the row
+ * header — but it still travels through this editor unchanged, because a code
+ * already on a shelf label must survive both a save and a rejected submit.
  */
 export default function VariantEditor({
   initialVariants = [],
@@ -301,6 +307,15 @@ export default function VariantEditor({
               <h4 className="font-heading text-foreground text-lg">
                 {row.color.trim() || `Colour ${index + 1}`}
               </h4>
+              {/* Read-only, and absent until there is one: the SKU is minted by
+                  the model on save, so a colour being added has nothing to show
+                  yet. Plain text rather than a disabled input — it exists to be
+                  read off and copied, never typed into. */}
+              {row.sku && (
+                <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.1em] uppercase">
+                  {row.sku}
+                </span>
+              )}
             </div>
             <Button
               type="button"
@@ -366,25 +381,6 @@ export default function VariantEditor({
                   className="border-b-border h-12 rounded-none border-t-0 border-r-0 border-b border-l-0 font-mono"
                 />
               </div>
-            </Field>
-
-            <Field>
-              <FieldLabel
-                htmlFor={`variant-sku-${row.key}`}
-                className={fieldLabelClassName}
-              >
-                SKU
-              </FieldLabel>
-              <Input
-                id={`variant-sku-${row.key}`}
-                value={row.sku}
-                onChange={(event) =>
-                  patchRow(row.key, { sku: event.target.value })
-                }
-                maxLength={16}
-                placeholder="JTJ-BIF-BLK"
-                className="border-b-border h-12 rounded-none border-t-0 border-r-0 border-b border-l-0"
-              />
             </Field>
 
             <Field>

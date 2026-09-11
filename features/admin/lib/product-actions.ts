@@ -37,8 +37,15 @@ function duplicateKeyErrors(error: unknown): Record<string, string> | null {
     // The unique index moved onto the colourway with the field it guards, so
     // the E11000 now names "variants.sku". Reported under `variants`, which is
     // where the whole colour editor hangs its one error message.
+    //
+    // "Try again" rather than "fix it": there is no SKU field left to correct,
+    // and the second save re-runs the generator hook, which by then can see
+    // the code that won the race and takes the next counter. That makes this
+    // self-healing without the retry loop generateOrderNumber needs — a race
+    // here needs two admins saving lookalike products in the same instant.
     if (field === "variants.sku" || field === "sku") {
-      errors.variants = "That SKU is already in use by another product";
+      errors.variants =
+        "Could not assign a unique SKU. Please try saving again.";
     } else if (field === "slug") {
       // The slug is derived from the name, so surface it on the name input.
       errors.name = "A product with this name already exists";
@@ -86,8 +93,8 @@ async function deleteDetachedImages(previous: string[], next: string[]) {
  * Images are uploaded to Cloudinary as part of submitting, so anything that
  * rejects the save afterwards strands them there as orphans. This front-loads
  * every check that doesn't need the images to exist — the shared zod schema
- * plus the two things only the database knows: whether the SKU is taken, and
- * whether the category still exists.
+ * plus the two things only the database knows: whether an already-assigned SKU
+ * is taken, and whether the category still exists.
  *
  * Not a security boundary; the real actions re-validate. This exists purely so
  * the common failures happen before the upload rather than after.
@@ -116,18 +123,27 @@ export async function validateProductDraft(
   try {
     await connectDB();
 
-    // Every colourway's SKU at once — one query rather than one per colour,
-    // and the same check the unique index would make at save time.
-    const skuTaken = await Product.exists({
-      "variants.sku": { $in: parsed.data.variants.map((v) => v.sku) },
-      ...(currentId ? { _id: { $ne: currentId } } : {}),
-    });
-    if (skuTaken) {
-      return {
-        ok: false,
-        errors: { variants: "That SKU is already in use by another product" },
-        message: "Please correct the highlighted fields.",
-      };
+    // Only the colourways that already carry a code. A new product carries
+    // none at all — every SKU is minted by the model on save — so this check
+    // now fires only for an existing colourway whose SKU somehow landed on
+    // another product, and is skipped entirely rather than asking Mongo to
+    // match an empty $in.
+    const submittedSkus = parsed.data.variants
+      .map((variant) => variant.sku)
+      .filter((sku): sku is string => Boolean(sku));
+
+    if (submittedSkus.length > 0) {
+      const skuTaken = await Product.exists({
+        "variants.sku": { $in: submittedSkus },
+        ...(currentId ? { _id: { $ne: currentId } } : {}),
+      });
+      if (skuTaken) {
+        return {
+          ok: false,
+          errors: { variants: "That SKU is already in use by another product" },
+          message: "Please correct the highlighted fields.",
+        };
+      }
     }
 
     // A form left open while the category was deleted elsewhere.
@@ -208,7 +224,8 @@ export async function createProduct(
 
   try {
     await connectDB();
-    // The slug is derived and de-duplicated by the model's pre("validate") hook.
+    // The slug and every colourway's SKU are derived and de-duplicated by the
+    // model's pre("validate") hooks — nothing here is asked to invent either.
     await Product.create({
       name,
       category: new Types.ObjectId(category),

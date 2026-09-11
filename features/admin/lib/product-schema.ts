@@ -2,6 +2,7 @@ import { z } from "zod";
 // Never from models/Product.ts: this module is imported by client components,
 // and the model would drag Mongoose into the browser bundle.
 import { HEX_COLOR_PATTERN } from "@/lib/color";
+import { SKU_MAX_LENGTH } from "@/lib/sku";
 
 // One schema, imported by both the Server Action (authoritative) and the client
 // (instant feedback), so the rules can't drift. Mongoose validation is the last
@@ -129,12 +130,17 @@ export const productVariantInputSchema = z.object({
     .trim()
     .regex(HEX_COLOR_PATTERN, "Every colour needs a swatch, e.g. #1c1b1a")
     .transform((value) => value.toLowerCase()),
+  // Optional, and blank means "mint me one". Nothing in the admin UI types a
+  // SKU any more — the model's pre("validate") hook assigns one to every
+  // colourway that arrives without it. What does still arrive is the SKU of a
+  // colourway that already has one, echoed straight back by the editor, and
+  // that must round-trip untouched.
   sku: z
     .string()
     .trim()
-    .min(3, "Every colour needs its own SKU")
-    .max(16, "A SKU cannot exceed 16 characters")
-    .transform((value) => value.toUpperCase()),
+    .max(SKU_MAX_LENGTH, `A SKU cannot exceed ${SKU_MAX_LENGTH} characters`)
+    .optional()
+    .transform((value) => (value ? value.toUpperCase() : undefined)),
   stock: variantStockField,
   images: z.array(productImageSchema, {
     error: "Uploaded images could not be read",
@@ -162,12 +168,14 @@ const variantsField = z.preprocess(
         variants.length,
       "Two colours share a name",
     )
-    .refine(
-      (variants) =>
-        new Set(variants.map((variant) => variant.sku)).size ===
-        variants.length,
-      "Two colours share a SKU",
-    ),
+    // Only the SKUs that are actually set: two colours still waiting to be
+    // assigned one both read as undefined, and that is not a clash.
+    .refine((variants) => {
+      const skus = variants
+        .map((variant) => variant.sku)
+        .filter((sku): sku is string => Boolean(sku));
+      return new Set(skus).size === skus.length;
+    }, "Two colours share a SKU"),
 );
 
 /** Which button was pressed (D4) — decides the persisted status. */

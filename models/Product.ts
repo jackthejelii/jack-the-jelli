@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import { HEX_COLOR_PATTERN } from "@/lib/color";
 import { escapeRegex, slugify } from "@/lib/slug";
+import { SKU_MAX_LENGTH, colorCode, nextSku, skuStem } from "@/lib/sku";
 
 export const PRODUCT_STATUSES = ["Draft", "Published", "Archived"] as const;
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
@@ -89,7 +90,13 @@ const productVariantSchema = new Schema<IProductVariant>({
       "Swatch colour must be a hex value like #1c1b1a",
     ],
   },
-  sku: { type: String, required: true, uppercase: true, trim: true },
+  sku: {
+    type: String,
+    required: true,
+    uppercase: true,
+    trim: true,
+    maxlength: SKU_MAX_LENGTH,
+  },
   stock: { type: Number, required: true, min: 0, default: 0 },
   // Objects rather than bare URLs: publicId is what makes deletion possible.
   images: { type: [productImageSchema], default: [] },
@@ -187,6 +194,60 @@ productSchema.pre("validate", async function () {
   let suffix = 2;
   while (used.has(`${base}-${suffix}`)) suffix += 1;
   this.slug = `${base}-${suffix}`;
+});
+
+// Mint a SKU for any colourway that arrived without one. Same shape as the slug
+// hook above — derive a stem, ask the database which codes in that family are
+// spoken for, take the lowest free counter — and the same last line of defence,
+// the unique index, if two saves race.
+//
+// Deliberately *only* fills an empty SKU. A code already on a shelf label must
+// survive a rename or a recolour, so nothing here ever rewrites one; that is
+// also what leaves hand-typed SKUs from before this hook existed untouched.
+productSchema.pre("validate", async function () {
+  const pending = (this.variants ?? []).filter(
+    (variant) => !variant.sku?.trim(),
+  );
+  if (pending.length === 0) return;
+
+  // Every code this document already carries is spoken for too — both the
+  // untouched siblings and the ones handed out earlier in this same loop.
+  const taken = new Set(
+    (this.variants ?? [])
+      .map((variant) => variant.sku?.trim().toUpperCase())
+      .filter((sku): sku is string => Boolean(sku)),
+  );
+
+  const model = this.constructor as mongoose.Model<IProduct>;
+  const stem = skuStem(this.name ?? "");
+
+  // One query per distinct prefix rather than per colourway: a product's
+  // colours usually differ, but two that abbreviate alike would otherwise ask
+  // the same question twice.
+  const seen = new Set<string>();
+  for (const variant of pending) {
+    const prefix = `${stem}-${colorCode(variant.color ?? "")}`;
+    if (!seen.has(prefix)) {
+      seen.add(prefix);
+      const siblings = await model
+        .find({
+          "variants.sku": new RegExp(`^${escapeRegex(prefix)}-\\d+$`, "i"),
+          _id: { $ne: this._id },
+        })
+        .select("variants.sku")
+        .lean();
+
+      for (const doc of siblings) {
+        for (const sibling of doc.variants ?? []) {
+          if (sibling.sku) taken.add(sibling.sku.toUpperCase());
+        }
+      }
+    }
+
+    const sku = nextSku(prefix, taken);
+    taken.add(sku);
+    variant.sku = sku;
+  }
 });
 
 // The half of variant uniqueness no index can enforce (see above): two colours

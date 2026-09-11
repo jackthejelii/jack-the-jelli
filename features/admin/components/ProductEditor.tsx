@@ -257,7 +257,8 @@ export default function ProductEditor({
               Colours &amp; Inventory
             </h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              Each colourway carries its own SKU, stock count and photographs.
+              Each colourway carries its own stock count and photographs, and is
+              given its own SKU when you save.
             </p>
           </div>
           {/* Seeded with the saved colourways so a save never wipes them. */}

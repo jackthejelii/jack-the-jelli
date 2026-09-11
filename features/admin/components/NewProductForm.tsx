@@ -194,7 +194,7 @@ export default function NewProductForm({ categories }: NewProductFormProps) {
             colour in two places. */}
         <ProductFormSection
           title="Colours & Inventory"
-          description="Every colourway this piece comes in — each with its own SKU, stock count and photographs. A single-colour piece is simply one entry."
+          description="Every colourway this piece comes in — each with its own stock count and photographs. A SKU is assigned automatically when you save. A single-colour piece is simply one entry."
         >
           <VariantEditor
             key={variantsKey}
