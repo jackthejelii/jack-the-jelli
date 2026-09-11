@@ -145,9 +145,11 @@ async function sendEmail({
   // inbox nothing was ever sent to, with nothing logged anywhere.
   //
   // `replyTo` defaults from env rather than per-call so the three existing
-  // senders inherit a working Reply without being touched. Without it the
-  // domain is send-only (no root MX — see docs/EMAIL-SENDER-PLAN.md) and a
-  // customer replying to their own receipt reaches nothing.
+  // senders inherit a working Reply without being touched. `SUPPORT_EMAIL` is
+  // now a mailbox that genuinely receives — the root `@` MX points at Resend's
+  // inbound endpoint and `app/api/email/inbound` forwards from there — so a
+  // customer replying to their own receipt reaches a person. Before that
+  // existed the domain was send-only and every Reply vanished.
   const { error } = await resend.emails.send({
     from: sender,
     to,
@@ -379,4 +381,92 @@ export async function sendContactNotificationEmail({
     summaryHtml: renderContactSummary({ name, email, phone, message }),
     devDetail: `contact message from ${email}`,
   });
+}
+
+/**
+ * The domain's own MX now points at Resend's inbound endpoint, so mail to
+ * `support@jackthejelli.com` lands in Resend rather than bouncing. Resend has
+ * no mailbox UI worth living in, so this hands each message on to a real inbox
+ * the owner already reads — `SUPPORT_FORWARD_TO`.
+ *
+ * `from` is our own verified sender, never the stranger who wrote in:
+ * re-sending as them would fail SPF and DKIM for their domain and teach every
+ * receiver that we forge addresses. Their address goes in `Reply-To` instead,
+ * so hitting Reply in the forwarded copy answers the customer directly — the
+ * same arrangement `sendContactNotificationEmail` already uses.
+ */
+export async function forwardInboundEmail({
+  from,
+  to,
+  subject,
+  text,
+  html,
+}: {
+  from: string;
+  to?: string;
+  subject?: string;
+  text?: string;
+  html?: string;
+}) {
+  const destination = process.env.SUPPORT_FORWARD_TO;
+  if (!destination) {
+    throw new Error(
+      "Inbound forwarding is not configured — set SUPPORT_FORWARD_TO.",
+    );
+  }
+
+  // A destination on our own domain would arrive back at Resend's inbound
+  // endpoint and be forwarded again, forever, at one Resend quota unit per lap.
+  // Cheap to check, unbounded to get wrong.
+  const ownDomain = senderAddress()?.split("@")[1]?.toLowerCase();
+  if (ownDomain && destination.toLowerCase().endsWith(`@${ownDomain}`)) {
+    throw new Error(
+      `SUPPORT_FORWARD_TO must be an address off ${ownDomain} — forwarding to the same domain loops.`,
+    );
+  }
+
+  const sender = senderAddress();
+  const replyAddress = from.match(/<([^>]+)>/)?.[1]?.trim() ?? from.trim();
+
+  return sendEmail({
+    to: destination,
+    from: sender
+      ? `${sanitizeHeaderText(replyAddress, 60)} via Jack The Jelli <${sender}>`
+      : undefined,
+    replyTo: replyAddress,
+    subject: subject
+      ? sanitizeHeaderText(subject, 120)
+      : "(no subject) — forwarded from the shop inbox",
+    heading: `Mail to ${sanitizeHeaderText(to ?? "the shop", 60)}`,
+    bodyText: `From ${replyAddress}. Reply to this email to answer them directly.`,
+    // The only caller-supplied HTML this module ever renders. An inbound
+    // message is a stranger's markup, so it is NOT passed through to
+    // `summaryHtml`, which is the trusted slot — the plain-text part is escaped
+    // and wrapped instead. A forwarded copy that loses styling is a fair price
+    // for not rendering an attacker's HTML in the owner's mail client.
+    summaryHtml: renderForwardedBody(text, html),
+    devDetail: `inbound mail from ${replyAddress}`,
+  });
+}
+
+/**
+ * Renders the forwarded message body, preferring the plain-text part.
+ *
+ * When a sender provides only HTML, the tags are stripped rather than trusted:
+ * see the note in `forwardInboundEmail` about whose markup this is.
+ */
+function renderForwardedBody(text?: string, html?: string): string {
+  const source =
+    text?.trim() ||
+    html
+      ?.replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() ||
+    "(this message had no readable body)";
+
+  return `<div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:#111;">${escapeHtml(
+    source,
+  )}</div>`;
 }

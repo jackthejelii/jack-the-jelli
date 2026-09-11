@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EB_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import RouteProgress from "@/components/layout/RouteProgress";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import { Toaster } from "@/components/ui/sonner";
@@ -82,6 +83,12 @@ export default function RootLayout({
             is the only measurement that settles whether a change helped.
             Inert outside Vercel, so local dev and any other host ignore it. */}
         <SpeedInsights />
+        {/* Page views and referrers, enabled on the Vercel project on
+            11 September 2026. Cookieless and it stores no personal data, which
+            is what lets the privacy policy keep its short processor list — if
+            that ever changes, the policy changes with it. Same deal as
+            SpeedInsights: no paint cost, inert off Vercel. */}
+        <Analytics />
       </body>
     </html>
   );
