@@ -18,8 +18,11 @@ import {
  * property was already gone: the homepage prerenders `getFeaturedProducts`.
  * Keeping it here bought nothing and cost the first visitor to every product a
  * cold render. `dynamicParams` stays at its default of `true`, so anything
- * past the limit behaves exactly as it did before, and the query fails soft so
- * an unreachable cluster degrades the build rather than breaking it.
+ * past the limit behaves exactly as it did before.
+ *
+ * The helper guarantees at least one entry — Cache Components treats an empty
+ * result as a build error, not as "prerender nothing" — so there is no empty
+ * case to handle here.
  */
 export async function generateStaticParams() {
   const slugs = await getPrebuildableProductSlugs();

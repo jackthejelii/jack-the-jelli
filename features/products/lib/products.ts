@@ -462,6 +462,13 @@ export async function getPublicProductBySlug(
 }
 
 /**
+ * A slug that `slugify` can never produce — it strips every non-alphanumeric
+ * run down to a dash, so nothing with an underscore is reachable — used to keep
+ * `generateStaticParams` non-empty when the catalogue has no published pieces.
+ */
+export const NO_PREBUILDABLE_SLUG = "__no_published_products__";
+
+/**
  * Slugs to prerender at build time, newest first.
  *
  * The product route used to hand back an empty array so the build never needed
@@ -476,27 +483,34 @@ export async function getPublicProductBySlug(
  * anything past this limit still renders on first request and is cached from
  * then on — the same behaviour every product had before, now only for the tail.
  *
- * Fails soft on purpose. A build should not break because the cluster was
- * asleep; returning nothing degrades to exactly the old on-demand behaviour.
+ * Never returns an empty array. Under Cache Components a `generateStaticParams`
+ * that yields nothing is a hard build failure (`EmptyGenerateStaticParamsError`,
+ * E898) rather than a fallback to on-demand rendering, so an unseeded catalogue
+ * would take the build down. The sentinel stands in for "nothing to prebuild":
+ * it prerenders as a 404 and, with `dynamicParams` at its default, changes
+ * nothing for any real slug.
+ *
+ * Deliberately does NOT swallow a connection error. It used to, on the theory
+ * that a sleeping cluster should degrade the build rather than break it — but
+ * that theory was already false (`getFeaturedProducts` on the homepage throws
+ * on the same dead connection), and under Cache Components the swallow turned a
+ * plain `MongooseServerSelectionError` into an opaque complaint about
+ * `generateStaticParams`. If Atlas is unreachable at build time — usually
+ * Network Access missing `0.0.0.0/0`, see docs/CLIENT-HANDOVER.md — the build
+ * should say exactly that.
  */
 export async function getPrebuildableProductSlugs(
   limit: number = PRERENDER_LIMIT,
 ): Promise<string[]> {
-  try {
-    await connectDB();
+  await connectDB();
 
-    const products = await Product.find({ status: "Published" })
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(limit)
-      .select("slug")
-      .lean<{ slug: string }[]>();
+  const products = await Product.find({ status: "Published" })
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(limit)
+    .select("slug")
+    .lean<{ slug: string }[]>();
 
-    return products.map((product) => product.slug);
-  } catch (error) {
-    console.warn(
-      "[products] Could not read slugs to prerender; every product will render on demand instead.",
-      error,
-    );
-    return [];
-  }
+  if (products.length === 0) return [NO_PREBUILDABLE_SLUG];
+
+  return products.map((product) => product.slug);
 }
