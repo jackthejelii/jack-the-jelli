@@ -61,6 +61,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "yearly" as const,
       priority: 0.5,
     },
+    // Higher priority than the privacy/terms pair: these two are what a
+    // hesitant buyer looks for before ordering, and what Merchant Center and a
+    // Safe Browsing reviewer look for before trusting the shop.
+    {
+      url: absoluteUrl("/shipping"),
+      changeFrequency: "yearly" as const,
+      priority: 0.5,
+    },
+    {
+      url: absoluteUrl("/returns"),
+      changeFrequency: "yearly" as const,
+      priority: 0.5,
+    },
     {
       url: absoluteUrl("/privacy"),
       changeFrequency: "yearly" as const,

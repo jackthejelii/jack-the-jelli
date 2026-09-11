@@ -70,8 +70,16 @@ export default function PrivacyPolicyPage() {
       </p>
       <p>
         We set one cookie: the session cookie that keeps you signed in. It is
-        not used for advertising. We run no analytics, no advertising pixels and
-        no third-party trackers of any kind.
+        not used for advertising, and we run no advertising pixels and no
+        third-party advertising trackers of any kind.
+      </p>
+      <p>
+        We do measure how the site itself performs, through Vercel&rsquo;s Speed
+        Insights and Web Analytics. These record things like which page was
+        loaded, how quickly it rendered, the referring site, and a coarse
+        country-level location. They set no cookies, do not follow you to other
+        websites, and are not used to build a profile of you — we use them to
+        find slow and broken pages, nothing else.
       </p>
 
       <h2>Payment</h2>
@@ -90,8 +98,8 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul>
         <li>
-          <strong>Vercel</strong>: hosts the website and keeps standard server
-          logs.
+          <strong>Vercel</strong>: hosts the website, keeps standard server
+          logs, and provides the performance measurement described above.
         </li>
         <li>
           <strong>MongoDB Atlas</strong>: stores orders, accounts and baskets.

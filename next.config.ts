@@ -61,19 +61,11 @@ const nextConfig: NextConfig = {
      * through here.
      */
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
-        // The AI-mockup placeholders in ProductSection.tsx, and nothing else.
-        // Google avatars don't need an entry — UserMenu renders them through a
-        // plain <img>, not next/image, so they bypass the optimizer entirely.
-        //
-        // This whole entry goes away with SEO-CHECKLIST.md D2, which replaces
-        // those placeholders with real Cloudinary assets. Scoped rather than
-        // left open in the meantime: same billing hole, same one-line fix.
-        pathname: "/aida-public/**",
-        search: "",
-      },
+      // The `lh3.googleusercontent.com` entry that used to sit here is gone:
+      // SEO-CHECKLIST.md D2 is done, and ProductSection.tsx now imports real
+      // photographs from `public/` instead of hotlinking AI mockups. Google
+      // avatars never needed an entry — UserMenu renders them through a plain
+      // <img>, not next/image, so they bypass the optimizer entirely.
       {
         protocol: "https",
         hostname: "res.cloudinary.com",

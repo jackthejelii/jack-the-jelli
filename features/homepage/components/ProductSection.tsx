@@ -3,13 +3,16 @@ import { ArrowRight } from "lucide-react";
 import AppLink from "@/components/layout/AppLink";
 import Reveal from "@/components/layout/Reveal";
 
-// TODO: Remove this once we have a proper image service
-
-const flameImage =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCHtIARaKt5BvtQN4y3QXm-c-ZFBa8b15Wy5cQoRhRiInTj483QUDl26DBNdnBm6mwXh0J5vjJi8h1RKg0JCP9Z5BIMhMEiwlVGDetafXRgU5Wh46B5-lG0d6IJ0J1P35nu735UGEb61fGDepBSnwGT_moQ3bii2YU8p_Y00Mhw5hlbVdGSDNp2FoWI5PIG-ifj49ZZgv853DBUW3_FlmDEHjZZaQJtOvwjPzwAPtGR-4jhXMMYqh4n0iFIKkxL7urEqsqZQxVdh0OD";
-
-const regularImage =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCGsD0T_IBGaLXNSbF6aA2nFDdW4mMG9CtVwXXzatVVVjnjvkgf6XSWkA5tkEyJkp7hOZjk7fzJzOVkrv57e_1M_mPRJGFGLww2IaGBMfkg_7otGwbVddyCMvrfUZ-6hz5FZ4Vo3MrqssbPDcpldUGweGbUfiKUzOM4LjjvfkYn8n2-akp5kyzJ5PgS0lWzAueIWvwMPsYP1HI7jSzjxXIIvCYj0ZU3GV0lbMCaOr1HbFiZnDLuvkYP-QY225sPAJVp0q0uWVJjtq-I";
+// Real photographs, served from `public/` and optimised by next/image at
+// request time. They replace two AI-mockup placeholders that were hotlinked
+// from `lh3.googleusercontent.com/aida-public/…` — a host that could have
+// dropped them without warning, and one heavily used by phishing kits, which
+// is a bad thing for a new commerce domain to be seen loading.
+//
+// Imported rather than written as string paths so the build fails loudly if a
+// file is renamed, and so next/image knows each one's intrinsic size.
+import flameImage from "@/public/Flame_homepage.jpg";
+import regularImage from "@/public/Regular.jpg";
 
 export default function ProductSection() {
   return (
@@ -46,20 +49,15 @@ export default function ProductSection() {
 
           <div className="order-1 md:order-2 md:col-span-5 md:col-start-8">
             <div className="group bg-surface-container relative aspect-4/5 overflow-hidden border border-[rgba(138,121,104,0.2)]">
-              {flameImage ? (
-                <Image
-                  src={flameImage}
-                  alt="A handcrafted leather bifold wallet with an embossed flame design"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 40vw"
-                  loading="lazy"
-                  className="ease-editorial object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              ) : (
-                <div className="text-on-surface-variant absolute inset-0 flex items-center justify-center text-sm">
-                  Image placeholder
-                </div>
-              )}
+              <Image
+                src={flameImage}
+                alt="A handcrafted leather bifold wallet with an embossed flame design"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 40vw"
+                loading="lazy"
+                placeholder="blur"
+                className="ease-editorial object-cover transition-transform duration-700 group-hover:scale-105"
+              />
             </div>
           </div>
         </div>
@@ -75,20 +73,15 @@ export default function ProductSection() {
           </Reveal>
 
           <div className="group bg-surface-container relative mx-auto aspect-video w-full max-w-5xl overflow-hidden border border-[rgba(138,121,104,0.2)] md:aspect-21/9">
-            {regularImage ? (
-              <Image
-                src={regularImage}
-                alt="A classic smooth leather bifold wallet in a natural tone"
-                fill
-                sizes="(max-width: 768px) 100vw, 80vw"
-                loading="lazy"
-                className="ease-editorial bg-no-repeat object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="text-on-surface-variant absolute inset-0 flex items-center justify-center text-sm">
-                Image placeholder
-              </div>
-            )}
+            <Image
+              src={regularImage}
+              alt="A classic smooth leather bifold wallet in a natural tone"
+              fill
+              sizes="(max-width: 768px) 100vw, 80vw"
+              loading="lazy"
+              placeholder="blur"
+              className="ease-editorial bg-no-repeat object-cover transition-transform duration-700 group-hover:scale-105"
+            />
           </div>
 
           <div className="mt-12">

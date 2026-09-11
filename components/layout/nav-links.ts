@@ -23,6 +23,8 @@ export const NAV_LINKS = [
  * tap from anywhere.
  */
 export const LEGAL_LINKS = [
+  { label: "Shipping", href: "/shipping" },
+  { label: "Returns", href: "/returns" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms of Service", href: "/terms" },
 ] as const;
