@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CollectionFilters from "@/features/products/components/CollectionFilters";
 import DiscoverMoreButton from "@/features/products/components/DiscoverMoreButton";
 import ProductCard from "@/features/products/components/ProductCard";
@@ -34,6 +35,8 @@ export default function CollectionGrid({
   const [addedCount, setAddedCount] = useState(0);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // Shared by the "Discover More" button and the retry link so a second click
   // while a request is in flight is a no-op rather than firing a duplicate page fetch.
   const isLoadingRef = useRef(false);
@@ -61,6 +64,23 @@ export default function CollectionGrid({
       }
     });
   };
+
+  /**
+   * Drops params from the URL, which is where every filter on this page lives.
+   * Written here rather than reached for from CollectionFilters because the
+   * empty state renders in the grid, and threading a callback up through the
+   * filter row to come back down would be more wiring than a URLSearchParams.
+   */
+  const clearParams = (...keys: string[]) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const key of keys) params.delete(key);
+    const next = params.toString();
+    startTransition(() => router.replace(next ? `?${next}` : "?"));
+  };
+
+  // Genuinely nothing published, as opposed to nothing left after filtering —
+  // the first has no filter to clear and shouldn't be offered one.
+  const isEmptyCatalogue = total === 0 && !query.q && !query.category;
 
   return (
     // data-collection / data-results pair with the [data-pending] flag
@@ -98,15 +118,42 @@ export default function CollectionGrid({
           ))}
         </div>
       ) : (
-        <p
+        <div
           role="status"
-          className="text-on-surface-variant mt-16 text-center text-[16px]"
+          className="mt-16 flex flex-col items-center gap-5 text-center"
           data-results=""
         >
-          {total === 0 && !query.q && !query.category
-            ? "No pieces are available yet. Check back soon."
-            : "No pieces match your filters. Try clearing a filter or searching for something else."}
-        </p>
+          <p className="text-on-surface-variant text-[16px]">
+            {isEmptyCatalogue
+              ? "No pieces are available yet. Check back soon."
+              : "No pieces match your filters."}
+          </p>
+          {/* A filtered-to-nothing grid used to end in prose telling the
+              shopper to clear a filter, without giving them anything to press.
+              These are that sentence made operable. */}
+          {!isEmptyCatalogue && (
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              {query.q && (
+                <button
+                  type="button"
+                  onClick={() => clearParams("q")}
+                  className="text-foreground hover:text-on-surface-variant border-b border-current pb-0.5 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300"
+                >
+                  Clear search
+                </button>
+              )}
+              {(query.q || query.category) && (
+                <button
+                  type="button"
+                  onClick={() => clearParams("q", "category")}
+                  className="text-foreground hover:text-on-surface-variant border-b border-current pb-0.5 text-[12px] font-semibold tracking-widest uppercase transition-colors duration-300"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {isPending && (

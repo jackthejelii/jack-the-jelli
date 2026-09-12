@@ -10,14 +10,17 @@ import {
 } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Clock, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  RECENT_SEARCHES_KEY,
+  RECENT_SEARCHES_LIMIT,
   SEARCH_MIN_CHARS,
   SUGGEST_DEBOUNCE_MS,
 } from "@/features/products/lib/constants";
 import { formatPrice } from "@/features/products/lib/format";
+import { highlightMatch } from "@/features/products/lib/highlight";
 import { searchProductSuggestions } from "@/features/products/lib/product-actions";
 import type {
   CategorySuggestion,
@@ -37,7 +40,15 @@ type Row =
       category: CategorySuggestion;
     }
   | { kind: "product"; key: string; href: string; product: ProductSuggestion }
+  /** A past search, offered while the box is focused but effectively empty. */
+  | { kind: "recent"; key: string; query: string }
+  /** The way out of a search that matched nothing. */
+  | { kind: "browse"; key: string }
   | { kind: "all"; key: string; total: number };
+
+/** "yellow" / "yellow or green" — the colour words a fruitless query named. */
+const listColours = (families: string[]) =>
+  new Intl.ListFormat("en", { type: "disjunction" }).format(families);
 
 /**
  * The collection's search box, with a predictive panel underneath.
@@ -78,6 +89,52 @@ export default function CollectionSearch({
   const [cache, setCache] = useState(
     () => new Map<string, SuggestionsResult | null>(),
   );
+
+  /**
+   * Past searches, read from localStorage on first focus rather than during
+   * render — reading it in the render path makes the server and client markup
+   * disagree. Every access is wrapped: Safari in private mode throws on both
+   * read and write rather than returning null.
+   */
+  const [recent, setRecent] = useState<string[]>([]);
+
+  const loadRecent = () => {
+    try {
+      const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      setRecent(
+        Array.isArray(parsed)
+          ? parsed
+              .filter((entry): entry is string => typeof entry === "string")
+              .slice(0, RECENT_SEARCHES_LIMIT)
+          : [],
+      );
+    } catch {
+      setRecent([]);
+    }
+  };
+
+  const writeRecent = (next: string[]) => {
+    setRecent(next);
+    try {
+      window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+    } catch {
+      // A shopper who can't persist history can still search.
+    }
+  };
+
+  const rememberSearch = (value: string) => {
+    const entry = value.trim();
+    if (entry.length < SEARCH_MIN_CHARS) return;
+    writeRecent(
+      [
+        entry,
+        ...recent.filter(
+          (previous) => previous.toLowerCase() !== entry.toLowerCase(),
+        ),
+      ].slice(0, RECENT_SEARCHES_LIMIT),
+    );
+  };
 
   // Re-sync the box when the URL changes from elsewhere (back button, a reset
   // link). Adjusting state during render rather than in an effect — an effect
@@ -133,7 +190,19 @@ export default function CollectionSearch({
     // this false→false and so can't restart the debounce on the current one.
   }, [query, category, cacheKey, isLoading]);
 
+  const isIdle = query.length < SEARCH_MIN_CHARS;
+
   const rows = useMemo<Row[]>(() => {
+    // Nothing typed yet: the panel offers where the shopper has already been
+    // rather than sitting there blank.
+    if (isIdle) {
+      return recent.map((entry) => ({
+        kind: "recent" as const,
+        key: `recent-${entry}`,
+        query: entry,
+      }));
+    }
+
     if (!results || results.q !== query) return [];
 
     const categoryRows = results.categories.map((category): Row => {
@@ -163,8 +232,14 @@ export default function CollectionSearch({
       ...(results.total > results.products.length
         ? [{ kind: "all" as const, key: "all", total: results.total }]
         : []),
+      // A search that found no pieces ends in a door rather than a full stop.
+      // Offered even when a category matched, since the category shortcut
+      // narrows where this widens.
+      ...(productRows.length
+        ? []
+        : [{ kind: "browse" as const, key: "browse" }]),
     ];
-  }, [results, query, searchParams]);
+  }, [results, query, searchParams, isIdle, recent]);
 
   // The detail route is prerenderable (revalidate = 300), so warming it while
   // the row is merely highlighted makes the eventual push feel instant.
@@ -180,13 +255,32 @@ export default function CollectionSearch({
 
   const activateRow = (row: Row) => {
     close();
-    if (row.kind === "all") onSearch(query);
-    else router.push(row.href);
+    switch (row.kind) {
+      case "all":
+        rememberSearch(query);
+        onSearch(query);
+        break;
+      case "recent":
+        setSearch(row.query);
+        rememberSearch(row.query);
+        onSearch(row.query);
+        break;
+      case "browse":
+        // Drops the query rather than the whole filter set — the category
+        // select is its own control and clearing it from here would undo a
+        // choice the shopper never asked to lose.
+        setSearch("");
+        onSearch("");
+        break;
+      default:
+        router.push(row.href);
+    }
   };
 
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
     close();
+    rememberSearch(query);
     onSearch(query);
   };
 
@@ -195,6 +289,9 @@ export default function CollectionSearch({
     close();
     onSearch("");
   };
+
+  const forgetSearch = (entry: string) =>
+    writeRecent(recent.filter((previous) => previous !== entry));
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -218,14 +315,14 @@ export default function CollectionSearch({
     }
   };
 
-  const showSkeleton = isLoading && rows.length === 0;
-  const showEmpty = !isLoading && results?.q === query && rows.length === 0;
+  const showSkeleton = isLoading && !isIdle && rows.length === 0;
+  // Distinct from "no rows": a fruitless query still renders the browse row,
+  // so the message is what has to be keyed off the product count.
+  const showEmpty =
+    !isLoading && !isIdle && results?.q === query && !results.products.length;
   // Nothing to show also covers a failed request: the box quietly falls back to
   // plain submit-to-filter rather than hanging an empty frame under it.
-  const isPanelOpen =
-    isOpen &&
-    query.length >= SEARCH_MIN_CHARS &&
-    (showSkeleton || showEmpty || rows.length > 0);
+  const isPanelOpen = isOpen && (showSkeleton || showEmpty || rows.length > 0);
   const activeId = activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined;
 
   const rowClasses = (index: number) =>
@@ -255,9 +352,14 @@ export default function CollectionSearch({
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setIsOpen(e.target.value.trim().length >= SEARCH_MIN_CHARS);
+            // Always open now: below the minimum length the panel has recent
+            // searches to show, and `isPanelOpen` closes it when it has not.
+            setIsOpen(true);
           }}
-          onFocus={() => setIsOpen(query.length >= SEARCH_MIN_CHARS)}
+          onFocus={() => {
+            loadRecent();
+            setIsOpen(true);
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Search collection..."
           aria-label="Search collection"
@@ -307,8 +409,71 @@ export default function CollectionSearch({
 
           {showEmpty && (
             <p className="text-on-surface-variant px-3 py-4 text-[14px]">
-              No pieces match “{query}”.
+              {results.colorFamilies.length
+                ? // The query was understood, the colour just isn't in stock.
+                  // Saying so is the difference between a search that failed
+                  // and a search that answered.
+                  `No pieces in ${listColours(results.colorFamilies)} right now.`
+                : `No pieces match “${query}”.`}
             </p>
+          )}
+
+          {rows.some((row) => row.kind === "recent") && (
+            <div role="group" aria-label="Recent searches">
+              <div className="text-on-surface-variant flex items-center justify-between px-3 pt-3 pb-1 text-[11px] font-semibold tracking-widest uppercase">
+                <span>Recent</span>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    writeRecent([]);
+                  }}
+                  className="hover:text-foreground transition-colors duration-150"
+                >
+                  Clear
+                </button>
+              </div>
+              {rows.map((row, index) =>
+                row.kind !== "recent" ? null : (
+                  <div
+                    key={row.key}
+                    id={`${listboxId}-${index}`}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      activateRow(row);
+                    }}
+                    className={rowClasses(index)}
+                  >
+                    <Clock
+                      aria-hidden
+                      className="text-on-surface-variant size-3.5 shrink-0"
+                    />
+                    <span className="text-foreground truncate text-[14px]">
+                      {row.query}
+                    </span>
+                    {/* Not a <button>: it sits inside a role="option", where a
+                        nested control is invalid ARIA and unreachable by the
+                        arrow keys anyway. Keyboard users drop the entry by
+                        searching something else; this is a pointer affordance. */}
+                    <span
+                      role="presentation"
+                      aria-hidden
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        forgetSearch(row.query);
+                      }}
+                      className="text-on-surface-variant hover:text-foreground ml-auto cursor-pointer p-1 transition-colors duration-150"
+                    >
+                      <X className="size-3.5" />
+                    </span>
+                  </div>
+                ),
+              )}
+            </div>
           )}
 
           {rows.some((row) => row.kind === "category") && (
@@ -330,7 +495,7 @@ export default function CollectionSearch({
                     className={rowClasses(index)}
                   >
                     <span className="text-foreground font-serif text-[15px]">
-                      {row.category.name}
+                      {highlightMatch(row.category.name, query)}
                     </span>
                     <span className="text-on-surface-variant ml-auto text-[11px] tracking-widest uppercase">
                       Category
@@ -375,10 +540,28 @@ export default function CollectionSearch({
                     </div>
                     <div className="min-w-0">
                       <p className="text-foreground truncate font-serif text-[15px] leading-[1.5]">
-                        {row.product.name}
+                        {highlightMatch(row.product.name, query)}
                       </p>
-                      <p className="text-on-surface-variant text-[13px] leading-[1.5]">
-                        {formatPrice(row.product.price)}
+                      <p className="text-on-surface-variant flex items-center gap-1.5 text-[13px] leading-[1.5]">
+                        <span>{formatPrice(row.product.price)}</span>
+                        {/* Why this row is here at all. Searching "yellow"
+                            and being handed "Flame Bifold — Croc" reads as a
+                            broken search until the Citron swatch says
+                            otherwise. */}
+                        {row.product.matchedColor && (
+                          <>
+                            <span
+                              aria-hidden
+                              className="size-2.5 shrink-0 border border-[rgba(138,121,104,0.35)]"
+                              style={{
+                                background: row.product.matchedColor.hex,
+                              }}
+                            />
+                            <span className="truncate">
+                              {row.product.matchedColor.color}
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -407,13 +590,36 @@ export default function CollectionSearch({
               </div>
             ),
           )}
+
+          {rows.map((row, index) =>
+            row.kind !== "browse" ? null : (
+              <div
+                key={row.key}
+                id={`${listboxId}-${index}`}
+                role="option"
+                aria-selected={index === activeIndex}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  activateRow(row);
+                }}
+                className={`text-foreground cursor-pointer border-t border-[rgba(138,121,104,0.2)] px-3 py-3 text-center text-[12px] font-semibold tracking-widest uppercase transition-colors duration-150 ${
+                  index === activeIndex ? "bg-surface-container" : ""
+                }`}
+              >
+                Browse all pieces →
+              </div>
+            ),
+          )}
         </div>
       )}
 
       <p role="status" aria-live="polite" className="sr-only">
-        {isPanelOpen && !isLoading && results?.q === query
+        {isPanelOpen && !isIdle && !isLoading && results?.q === query
           ? results.total === 0
-            ? "No results."
+            ? results.colorFamilies.length
+              ? `No pieces in ${listColours(results.colorFamilies)}. Browse all pieces to start over.`
+              : "No results."
             : `${results.total} result${results.total === 1 ? "" : "s"} available.`
           : ""}
       </p>

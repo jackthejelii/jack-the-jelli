@@ -46,6 +46,49 @@ export const CATEGORY_SUGGESTION_LIMIT = 2;
 export const SEARCH_MIN_CHARS = 2;
 
 /**
+ * Words one query may carry before the rest are ignored.
+ *
+ * Each token becomes its own `$or` branch inside an `$and`, so an uncapped
+ * query lets a hand-crafted request build an arbitrarily large filter out of a
+ * 100-character string. Six is well past any real search of a wallet
+ * catalogue — "black croc bifold wallet" is four.
+ */
+export const SEARCH_MAX_TOKENS = 6;
+
+/**
+ * The query split into the words search will actually match on.
+ *
+ * Lives here, beside the other Mongoose-free constants, because three places
+ * need to agree on it: the filter builder, the panel's match-reason lookup,
+ * and the highlighter that bolds the hit inside a row. If the highlighter
+ * tokenised differently it would bold text the query never matched.
+ *
+ * A plural "s" is stripped because searching the stem is strictly more
+ * permissive — "wallet" is a substring of "wallets" but not the reverse — so
+ * "wallets" stops coming back empty while "wallet" returns the catalogue.
+ * Guarded on length and on a preceding "s" so "dress" doesn't become "dres".
+ */
+export function searchTokens(query: string): string[] {
+  return query
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, SEARCH_MAX_TOKENS)
+    .map((token) =>
+      token.length >= 4 && /[^s]s$/i.test(token) ? token.slice(0, -1) : token,
+    );
+}
+
+/** Past searches offered when the box is focused but effectively empty. */
+export const RECENT_SEARCHES_LIMIT = 5;
+
+/**
+ * Namespaced because an Artifact-style origin is shared with nothing, but the
+ * storefront's own localStorage already holds the Zustand cart — an unprefixed
+ * "recent-searches" is the kind of key a future feature collides with.
+ */
+export const RECENT_SEARCHES_KEY = "jtj:recent-searches";
+
+/**
  * Shorter than the admin tables' 300ms: this opens a panel in place rather than
  * pushing a URL, so it can afford to feel immediate.
  */

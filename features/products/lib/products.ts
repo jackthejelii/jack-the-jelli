@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { Types, type QueryFilter } from "mongoose";
+import { familiesForWord, hexFamilies, type ColorFamily } from "@/lib/color";
 import { connectDB } from "@/lib/db";
 import { escapeRegex } from "@/lib/slug";
 import { Category, Product, type IProduct } from "@/models";
@@ -14,6 +15,7 @@ import {
   SEARCH_MIN_CHARS,
   SITEMAP_LIMIT,
   SUGGESTION_LIMIT,
+  searchTokens,
   type SortOption,
 } from "@/features/products/lib/constants";
 import type {
@@ -43,7 +45,7 @@ type LeanSuggestion = {
   slug: string;
   name: string;
   price: number;
-  variants?: { images?: { url: string }[] }[];
+  variants?: { color?: string; hex?: string; images?: { url: string }[] }[];
 };
 
 /** A lean product with its category ref resolved by populate. */
@@ -136,6 +138,43 @@ interface SearchMatch {
   filter: QueryFilter<IProduct>;
   /** The categories the query hit, for the search panel's shortcut rows. */
   categories: LeanCategory[];
+  /**
+   * Colour families the query actually named, in the order they were typed.
+   * Empty for the ordinary case of a query with no colour word in it. The
+   * panel uses this to say "no pieces in yellow" rather than a bare "no
+   * results", and to explain which swatch made a row match.
+   */
+  colorFamilies: ColorFamily[];
+}
+
+/**
+ * Every distinct swatch in the published catalogue, bucketed into families.
+ *
+ * Cached rather than read per search for the reason `getSitemapProducts` is:
+ * this answers a question about the catalogue as a whole, not about one
+ * shopper's query, and re-deriving it on every keystroke would put a second
+ * Atlas round trip in front of a box that is already debounced to 180ms.
+ * `CATALOGUE_TAG` is invalidated by every admin product write, so adding a
+ * colourway makes it searchable immediately rather than a day later.
+ *
+ * Returns plain strings only — a `use cache` boundary serializes what crosses
+ * it, and `distinct` on a subdocument path hands back primitives, so there is
+ * nothing here that needs the rebuild `getSitemapProducts` does.
+ */
+async function getSwatchFamilies(): Promise<
+  { hex: string; families: ColorFamily[] }[]
+> {
+  "use cache";
+  cacheTag(CATALOGUE_TAG);
+  cacheLife("days");
+
+  await connectDB();
+
+  const hexes = await Product.distinct("variants.hex", { status: "Published" });
+
+  return hexes
+    .filter((hex): hex is string => typeof hex === "string")
+    .map((hex) => ({ hex, families: hexFamilies(hex) }));
 }
 
 /**
@@ -143,33 +182,131 @@ interface SearchMatch {
  * grid and the predictive panel. If only one of them knew about the category
  * widening, the panel's "See all 7 results" would land on a grid showing 3.
  *
- * Matches a product when its own name matches, or when it sits in a category
- * whose name does — so "wallets" finds the whole category, not just the pieces
- * with "wallet" in the title.
+ * Three things have to be true at once for this to feel like search rather
+ * than a substring test:
+ *
+ * 1. **Words are matched independently.** The query is split on whitespace and
+ *    every token must match *something*, but not the same something and not in
+ *    the typed order — so "croc flame" finds "Flame Bifold — Croc", which a
+ *    single contiguous regex never could.
+ * 2. **A token can match a colourway.** `variants.color` is where colour lives
+ *    (a colourway is a variant inside a product, not a sibling product), and
+ *    `features/admin/lib/products.ts` already reaches into the array the same
+ *    way for SKUs.
+ * 3. **A token can match a colour the catalogue doesn't have a word for.** The
+ *    colourways are named editorially — Citron, Oxblood, Taupe — and shoppers
+ *    type "yellow", "red", "brown". `familiesForWord` turns the shopper's word
+ *    into families and `getSwatchFamilies` turns the catalogue's stored `hex`
+ *    values into the same vocabulary, so the two meet without anyone
+ *    maintaining a synonym list. This is the case that sent "yellow" home
+ *    empty-handed while three Citron pieces sat in the grid.
+ *
+ * The hex path and the name path both stay in the `$or` rather than one
+ * replacing the other: a two-tone colourway ("Cobalt & Crimson") stores a
+ * single hex, so the family lookup only ever sees one of its halves and the
+ * name regex has to cover the other.
  */
 async function matchSearch(search: string): Promise<SearchMatch> {
-  // Escaped so a stray "(" in the search box can't throw a regex error.
-  const pattern = new RegExp(escapeRegex(search), "i");
+  const tokens = searchTokens(search);
 
-  // Unbounded on purpose: a storefront has a handful of categories, and the
-  // filter needs every matching id even though the panel only shows two.
-  const categories = await Category.find({ name: pattern })
-    .sort({ name: 1 })
-    .select("name slug")
-    .lean<LeanCategory[]>();
+  // The whole query as one phrase, so an exact hit on a multi-word name stays
+  // a match even when one of its words finds nothing on its own. Escaped so a
+  // stray "(" in the search box can't throw a regex error.
+  const phrase = new RegExp(escapeRegex(search), "i");
 
-  return {
-    filter: categories.length
-      ? {
-          $or: [
-            { name: pattern },
-            { category: { $in: categories.map((c) => c._id) } },
-          ],
-        }
-      : // No pointless $or when nothing matched.
-        { name: pattern },
-    categories,
+  // Unbounded on purpose: a storefront has a handful of categories, and every
+  // token has to be tested against all of them. Filtering in memory rather
+  // than with a second round trip per token is the whole reason it's a
+  // find-all — two categories is not a query worth optimising.
+  const [allCategories, swatches] = await Promise.all([
+    Category.find({})
+      .sort({ name: 1 })
+      .select("name slug")
+      .lean<LeanCategory[]>(),
+    getSwatchFamilies(),
+  ]);
+
+  const colorFamilies: ColorFamily[] = [];
+
+  // `searchTokens` has already stemmed these, so nothing else here needs to
+  // know about plurals.
+  const tokenPattern = (token: string) => new RegExp(escapeRegex(token), "i");
+
+  /** Every field one token is allowed to match. */
+  const branchesFor = (token: string): QueryFilter<IProduct>[] => {
+    const pattern = tokenPattern(token);
+
+    const branches: QueryFilter<IProduct>[] = [
+      { name: pattern },
+      { "variants.color": pattern },
+      // Empty across the catalogue today, but they are one line each and they
+      // stop this being rediscovered the day the admin starts filling them in.
+      { description: pattern },
+      { material: pattern },
+      { tags: pattern },
+    ];
+
+    // Per token, not per phrase. Matching the category against the whole query
+    // is what made "black wallet" return nothing: neither category is called
+    // "black wallet", so the widening never fired and the token "wallet" had
+    // no field of its own to match.
+    const categoryIds = allCategories
+      .filter((category) => pattern.test(category.name))
+      .map((category) => category._id);
+    if (categoryIds.length) branches.push({ category: { $in: categoryIds } });
+
+    const families = familiesForWord(token);
+    if (families.length) {
+      const hexes = swatches
+        .filter((swatch) =>
+          swatch.families.some((family) => families.includes(family)),
+        )
+        .map((swatch) => swatch.hex);
+
+      for (const family of families) {
+        if (!colorFamilies.includes(family)) colorFamilies.push(family);
+      }
+
+      // An unstocked colour word still counts as understood — it is why the
+      // empty state can say "no pieces in yellow" — but an empty `$in` would
+      // match nothing *and* cost a branch, so it is left off the query.
+      if (hexes.length) branches.push({ "variants.hex": { $in: hexes } });
+    }
+
+    return branches;
   };
+
+  // One token is the overwhelmingly common case and needs no wrapper at all.
+  const filter: QueryFilter<IProduct> =
+    tokens.length <= 1
+      ? { $or: branchesFor(tokens[0] ?? search) }
+      : {
+          $or: [
+            // Either the words appear together exactly as typed...
+            { name: phrase },
+            { "variants.color": phrase },
+            { description: phrase },
+            // ...or every word finds a home of its own, in any field and in
+            // any order — which is what lets "croc flame" find the piece that
+            // is actually called "Flame Bifold — Croc".
+            { $and: tokens.map((token) => ({ $or: branchesFor(token) })) },
+          ],
+        };
+
+  // The shortcut rows the panel offers. The phrase is the better answer when
+  // it hits one ("flame wallet" means the Flame Wallet category, not both),
+  // and the per-token fallback is what keeps a shortcut on screen for a query
+  // like "black wallet" that no category name contains outright.
+  const phraseCategories = allCategories.filter((category) =>
+    phrase.test(category.name),
+  );
+  const categories = phraseCategories.length
+    ? phraseCategories
+    : allCategories.filter((category) =>
+        tokens.some((token) => tokenPattern(token).test(category.name)),
+      );
+
+  return { filter, categories, colorFamilies };
 }
 
 export interface PublicProductQuery {
@@ -267,6 +404,7 @@ const EMPTY_SUGGESTIONS: Omit<SuggestionsResult, "q"> = {
   products: [],
   categories: [],
   total: 0,
+  colorFamilies: [],
 };
 
 /**
@@ -293,7 +431,11 @@ export async function getProductSuggestions({
 
   await connectDB();
 
-  const { filter: searchFilter, categories } = await matchSearch(search);
+  const {
+    filter: searchFilter,
+    categories,
+    colorFamilies,
+  } = await matchSearch(search);
   const categorySuggestions = categories
     .slice(0, CATEGORY_SUGGESTION_LIMIT)
     .map(({ name, slug }): CategorySuggestion => ({ name, slug }));
@@ -312,6 +454,7 @@ export async function getProductSuggestions({
         q: search,
         ...EMPTY_SUGGESTIONS,
         categories: categorySuggestions,
+        colorFamilies,
       };
     }
     filter.category = categoryId;
@@ -325,10 +468,12 @@ export async function getProductSuggestions({
     Product.find(filter)
       .sort(SORT_MAP[DEFAULT_SORT])
       .limit(SUGGESTION_LIMIT)
-      .select("slug name price variants.images")
+      .select("slug name price variants.color variants.hex variants.images")
       .lean<LeanSuggestion[]>(),
     Product.countDocuments(filter),
   ]);
+
+  const tokens = searchTokens(search);
 
   return {
     q: search,
@@ -337,10 +482,49 @@ export async function getProductSuggestions({
       name: product.name,
       price: product.price,
       thumbnail: product.variants?.[0]?.images?.[0]?.url,
+      matchedColor: matchedColorFor(product, tokens, colorFamilies),
     })),
     categories: categorySuggestions,
     total,
+    colorFamilies,
   };
+}
+
+/**
+ * Which colourway made this row a match, if a colourway is what did it.
+ *
+ * A shopper who types "yellow" and is handed "Flame Bifold — Croc" has no way
+ * to tell a good result from a broken search: nothing on the row says yellow.
+ * Returning the swatch lets the panel show it, which is the difference between
+ * search that looks clever and search that looks wrong.
+ *
+ * Name before hex, because the more specific reason is the better explanation
+ * — someone who typed "citron" should see Citron highlighted rather than
+ * whichever yellow happens to sit first in the array.
+ */
+function matchedColorFor(
+  product: LeanSuggestion,
+  tokens: string[],
+  colorFamilies: ColorFamily[],
+): { color: string; hex: string } | undefined {
+  const variants = (product.variants ?? []).filter(
+    (variant): variant is { color: string; hex: string } =>
+      typeof variant.color === "string" && typeof variant.hex === "string",
+  );
+  if (!variants.length) return undefined;
+
+  for (const token of tokens) {
+    const pattern = new RegExp(escapeRegex(token), "i");
+    const named = variants.find((variant) => pattern.test(variant.color));
+    if (named) return { color: named.color, hex: named.hex };
+  }
+
+  if (!colorFamilies.length) return undefined;
+
+  const byFamily = variants.find((variant) =>
+    hexFamilies(variant.hex).some((family) => colorFamilies.includes(family)),
+  );
+  return byFamily ? { color: byFamily.color, hex: byFamily.hex } : undefined;
 }
 
 /**

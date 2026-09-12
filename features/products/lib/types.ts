@@ -1,3 +1,5 @@
+import type { ColorFamily } from "@/lib/color";
+
 /**
  * One colourway as a card needs it. Deliberately without the image *list* —
  * a tile shows one photograph per colour, so shipping the whole gallery for
@@ -38,6 +40,13 @@ export interface ProductSuggestion {
   name: string;
   price: number;
   thumbnail?: string;
+  /**
+   * The colourway that caused the match, when a colourway is what caused it.
+   * Absent for an ordinary name match. The panel renders it as a swatch so a
+   * search for "yellow" visibly explains why it returned a piece whose name
+   * says nothing about yellow.
+   */
+  matchedColor?: { color: string; hex: string };
 }
 
 /** A category whose name matched the query, offered as a filter shortcut. */
@@ -56,6 +65,12 @@ export interface SuggestionsResult {
   categories: CategorySuggestion[];
   /** Every match, not just the ones shown — powers "See all N results". */
   total: number;
+  /**
+   * Colour families the query named, whether or not anything is in stock in
+   * them. Lets the empty state say "no pieces in yellow right now" instead of
+   * a bare "no results", which reads as a broken search box.
+   */
+  colorFamilies: ColorFamily[];
 }
 
 /** One image on the detail page. Mirrors IProductImage without the Mongoose types. */
