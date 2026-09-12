@@ -2,7 +2,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { Types, type QueryFilter } from "mongoose";
 import { familiesForWord, hexFamilies, type ColorFamily } from "@/lib/color";
 import { connectDB } from "@/lib/db";
-import { escapeRegex } from "@/lib/slug";
+import { escapeRegex, slugify } from "@/lib/slug";
 import { Category, Product, type IProduct } from "@/models";
 import {
   CATALOGUE_TAG,
@@ -246,6 +246,22 @@ async function matchSearch(search: string): Promise<SearchMatch> {
       { tags: pattern },
     ];
 
+    // The slug, which is the only *normalised* copy of the name the database
+    // holds: `slugify` runs NFKD before stripping, so a name typed in styled
+    // Unicode — Mathematical Bold pasted out of a caption generator, say —
+    // still lands here as plain ASCII. `$regex` matches stored bytes and has
+    // no way to fold them itself, so without this branch a product displayed
+    // as "Caution Yellow" is unreachable by the word "caution".
+    //
+    // Free rather than denormalised: the slug is already written, already
+    // unique-indexed, and already kept in step with the name by the model's
+    // pre-validate hook. It also quietly handles accents ("café" -> "cafe")
+    // and punctuation the name carries but nobody types.
+    const slugToken = slugify(token);
+    if (slugToken) {
+      branches.push({ slug: new RegExp(escapeRegex(slugToken), "i") });
+    }
+
     // Per token, not per phrase. Matching the category against the whole query
     // is what made "black wallet" return nothing: neither category is called
     // "black wallet", so the widening never fired and the token "wallet" had
@@ -286,6 +302,11 @@ async function matchSearch(search: string): Promise<SearchMatch> {
             { name: phrase },
             { "variants.color": phrase },
             { description: phrase },
+            // ...including against the slug, where the phrase's spaces have to
+            // become dashes to line up with how it was written.
+            ...(slugify(search)
+              ? [{ slug: new RegExp(escapeRegex(slugify(search)), "i") }]
+              : []),
             // ...or every word finds a home of its own, in any field and in
             // any order — which is what lets "croc flame" find the piece that
             // is actually called "Flame Bifold — Croc".

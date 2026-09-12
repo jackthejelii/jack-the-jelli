@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import { HEX_COLOR_PATTERN } from "@/lib/color";
 import { escapeRegex, slugify } from "@/lib/slug";
 import { SKU_MAX_LENGTH, colorCode, nextSku, skuStem } from "@/lib/sku";
+import { foldStyledText } from "@/lib/text";
 
 export const PRODUCT_STATUSES = ["Draft", "Published", "Archived"] as const;
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
@@ -169,6 +170,24 @@ productSchema.index({ status: 1, name: 1 });
 // needs a one-off db.products.dropIndex("sku_1"); scripts/migrate-variants.mjs
 // does exactly that.
 productSchema.index({ "variants.sku": 1 }, { unique: true });
+
+// Fold decorative letterforms out of the two fields that identify a piece.
+//
+// Runs before every other hook because the slug is derived downstream, and
+// because a name pasted from a caption generator is not really a styled name —
+// it is a different set of characters. See lib/text.ts for what that breaks;
+// the short version is that "𝐂𝐚𝐮𝐭𝐢𝐨𝐧 𝐘𝐞𝐥𝐥𝐨𝐰" contains no letter "C", so search
+// cannot find it and EB Garamond cannot draw it.
+//
+// Only `name` and `variants[].color` — the short identity fields. `description`
+// is left alone on purpose: it is prose someone wrote, and folding is a poor
+// trade there against the chance of rewriting a character they meant.
+productSchema.pre("validate", function () {
+  if (this.name) this.name = foldStyledText(this.name);
+  for (const variant of this.variants ?? []) {
+    if (variant.color) variant.color = foldStyledText(variant.color);
+  }
+});
 
 // Derive the slug from the name, de-duplicating with a numeric suffix. The
 // unique index is still the last line of defence against a race.

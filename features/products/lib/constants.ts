@@ -69,13 +69,20 @@ export const SEARCH_MAX_TOKENS = 6;
  * Guarded on length and on a preceding "s" so "dress" doesn't become "dres".
  */
 export function searchTokens(query: string): string[] {
-  return query
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, SEARCH_MAX_TOKENS)
-    .map((token) =>
-      token.length >= 4 && /[^s]s$/i.test(token) ? token.slice(0, -1) : token,
-    );
+  return (
+    query
+      // NFKC folds styled Unicode back to plain letters — Mathematical Bold out
+      // of a caption generator, fullwidth forms, ligatures — so a shopper who
+      // pastes a stylised product name searches for the real word instead of
+      // codepoints nothing in the catalogue contains.
+      .normalize("NFKC")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, SEARCH_MAX_TOKENS)
+      .map((token) =>
+        token.length >= 4 && /[^s]s$/i.test(token) ? token.slice(0, -1) : token,
+      )
+  );
 }
 
 /** Past searches offered when the box is focused but effectively empty. */
