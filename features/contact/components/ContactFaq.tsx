@@ -1,5 +1,4 @@
 import { Plus } from "lucide-react";
-import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 import { sectionHeadingClassName } from "@/features/checkout/lib/checkout-form";
 
 /**
@@ -8,10 +7,10 @@ import { sectionHeadingClassName } from "@/features/checkout/lib/checkout-form";
  *
  * Every answer is checked against something real: payment terms from the
  * product itself, the 64 districts from `features/checkout/lib/delivery.ts`,
- * the return window from `LEGAL_INFO`, and tracking from the shipped `/track`
- * route. The delivery window is the one figure that lives nowhere in code, so
- * it is the owner's stated 5 to 7 business days and must be changed here if
- * the courier arrangement changes.
+ * the all-sales-final policy from /returns and /terms, and tracking from the
+ * shipped `/track` route. The delivery window is the one figure that lives
+ * nowhere in code, so it is the owner's stated 5 to 7 business days and must
+ * be changed here if the courier arrangement changes.
  *
  * Native <details>. An accordion is one of the few widgets the platform
  * already ships correctly, so this needs no client JavaScript and works
@@ -35,7 +34,8 @@ const QUESTIONS = [
   },
   {
     question: "Can I return something?",
-    answer: `Within ${LEGAL_INFO.returnWindowDays} days of delivery, unused and in its original condition. Write to us and we will arrange it.`,
+    answer:
+      "Please check the piece at your door before you pay — if anything is wrong, refuse the delivery and it comes back to us at no cost to you. Once an order has been delivered and paid for, the sale is final.",
   },
   {
     question: "Where is my order?",

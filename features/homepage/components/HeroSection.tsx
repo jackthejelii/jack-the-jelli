@@ -41,7 +41,7 @@ export default function HeroSection() {
               exactly the region the portrait encode contains. */}
           <Image
             src={heroPoster}
-            alt="A handcrafted bifold wallet in silver and deep red leather, standing against a studio backdrop"
+            alt="A handcrafted bifold wallet in silver and deep red faux leather, standing against a studio backdrop"
             fill
             sizes="100vw"
             placeholder="blur"
@@ -92,7 +92,7 @@ export default function HeroSection() {
         <h1 className="text-foreground font-serif text-[clamp(2rem,5.6vw,3.5rem)] leading-[1.08] tracking-[-0.02em] text-balance">
           <span className="hero-mask">
             <span style={{ "--hero-delay": "300ms" } as React.CSSProperties}>
-              Leather wallets,
+              Everyday wallets,
             </span>
           </span>
           <span className="hero-mask">

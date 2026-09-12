@@ -55,7 +55,7 @@ export function organizationSchema(): Schema {
     logo: absoluteUrl("/logo.png"),
     image: absoluteUrl("/link-preview.jpg"),
     description:
-      "Handmade leather wallets and small goods, made in Bangladesh for daily carry.",
+      "Handmade faux leather wallets and small goods, made in Bangladesh for daily carry.",
     email: LEGAL_INFO.contactEmail,
     telephone: LEGAL_INFO.contactPhone,
     address: {

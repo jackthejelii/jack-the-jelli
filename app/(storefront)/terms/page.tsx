@@ -5,7 +5,7 @@ import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
-    "The terms you agree to when you order from Jack The Jelli: ordering, cash on delivery, delivery across Bangladesh, cancellations and returns.",
+    "The terms you agree to when you order from Jack The Jelli: ordering, cash on delivery, delivery across Bangladesh, inspecting your parcel at the door, and our all-sales-final policy.",
   alternates: { canonical: "/terms" },
 };
 
@@ -14,6 +14,11 @@ export const metadata: Metadata = {
  * OAuth consent screen can be published. Written against how the store
  * actually works: guest checkout, phone confirmation, cash on delivery, and
  * the delivery zones in features/checkout/lib/delivery.ts.
+ *
+ * The remedy this shop offers is refusal at the door, not a return window:
+ * sales are final once the courier has delivered and the cash has changed
+ * hands. /returns and /shipping say the same thing in the same words, and the
+ * three must be changed together or the shop is publishing two policies.
  */
 export default function TermsOfServicePage() {
   return (
@@ -34,6 +39,14 @@ export default function TermsOfServicePage() {
       <p>
         You must be 18 or older to order, or have the agreement of a parent or
         guardian.
+      </p>
+
+      <h2>What we make</h2>
+      <p>
+        Our pieces are crafted from{" "}
+        <strong>premium synthetic (faux) leather</strong>, as specified on each
+        product listing. They are not animal leather and we never describe them
+        as such.
       </p>
 
       <h2>Orders</h2>
@@ -85,21 +98,38 @@ export default function TermsOfServicePage() {
 
       <h2>Cancellations</h2>
       <p>
-        Tell us before an order ships and we will cancel it, at no cost. Once it
-        is with the courier, treat it as a return instead.
+        Tell us before an order ships and we will cancel it at no cost. Nothing
+        has been paid at that point, so there is nothing to refund. Once the
+        parcel is with the courier, your remaining option is to decline it at
+        the door.
       </p>
 
-      <h2>Returns</h2>
+      <h2>Inspect your order before you pay</h2>
       <p>
-        If a piece is faulty, damaged in transit, or not what you ordered,
-        contact us within {LEGAL_INFO.returnWindowDays} days of delivery and we
-        will arrange a replacement or a refund. Items must be unused and in the
-        condition they arrived in, with any packaging.
+        Because payment happens at your door, the minute the courier is standing
+        there is your opportunity to check the piece.{" "}
+        <strong>
+          Please open the parcel and inspect it before you hand over the cash or
+          accept the delivery.
+        </strong>{" "}
+        If it is damaged, faulty, or not the item you ordered, refuse it there
+        and then — it returns to us at no cost to you, and we will replace it or
+        cancel the order.
+      </p>
+
+      <h2>All sales are final</h2>
+      <p>
+        <strong>
+          Once an order has been successfully delivered by the courier and
+          payment is completed, all sales are strictly final.
+        </strong>{" "}
+        We do not offer returns, exchanges or refunds after successful delivery
+        and payment completion. That is why the inspection above matters: it is
+        the point at which a problem can still be put right.
       </p>
       <p>
-        Leather is a natural material. Grain, colour and markings vary from
-        piece to piece and darken with use. That variation is a property of the
-        material, not a fault, and product photographs are representative rather
+        Colour, finish and small surface markings vary a little between pieces
+        and between screens, and product photographs are representative rather
         than exact.
       </p>
 
@@ -110,11 +140,11 @@ export default function TermsOfServicePage() {
         suspend an account that is being used to abuse the shop or its staff.
       </p>
 
-      <h2>Our content</h2>
+      <h2>Intellectual property</h2>
       <p>
-        The photographs, text, designs and branding on this site belong to{" "}
-        {LEGAL_INFO.legalName}. Please do not copy or reuse them commercially
-        without asking us first.
+        All designs, graphics, photographs, branding and content on this site
+        are the sole property of {LEGAL_INFO.legalName} and may not be
+        reproduced without our written permission.
       </p>
 
       <h2>Where we stand</h2>

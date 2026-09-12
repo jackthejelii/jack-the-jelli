@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Handmade leather wallets built for daily carry and the occasional second look. Pull one out and watch the table go quietly jelly.",
+    "Handmade faux leather wallets built for daily carry and the occasional second look. Pull one out and watch the table go quietly jelly.",
   openGraph: {
     type: "website",
     siteName: SITE_NAME,

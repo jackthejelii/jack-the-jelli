@@ -229,7 +229,7 @@ export default function ProductDetailView({
             </div>
 
             {/* Product-level, not colourway-level: material and dimensions are
-                the same whichever leather you pick, so this no longer changes
+                the same whichever colourway you pick, so this no longer changes
                 under the swatch. */}
             <ProductSpecList
               material={product.material}

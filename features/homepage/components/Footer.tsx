@@ -29,7 +29,7 @@ export default function Footer() {
 
         {/* Centered: tagline */}
         <p className="text-on-surface-variant mt-4 text-center text-[14px] leading-relaxed tracking-wider">
-          Handmade leather goods, and the second looks that follow.
+          Handmade faux leather goods, and the second looks that follow.
         </p>
 
         {/* Centered: one row for everything that is not the brand itself.

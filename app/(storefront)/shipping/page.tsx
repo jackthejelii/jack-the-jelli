@@ -99,10 +99,15 @@ export default function ShippingPolicyPage() {
 
       <h2>If something arrives damaged</h2>
       <p>
-        Check the piece before the courier leaves if you can. If it arrives
-        damaged, or is not what you ordered, tell us within{" "}
-        {LEGAL_INFO.returnWindowDays} days of delivery and we will replace it or
-        refund it at our cost — see the <a href="/returns">Returns Policy</a>.
+        <strong>Check the piece before the courier leaves.</strong> Payment
+        happens at your door, so that is the moment a problem can still be put
+        right: if the parcel arrives damaged, or is not what you ordered, refuse
+        it there and then and call us on {LEGAL_INFO.contactPhone}. It returns
+        to us at no cost to you and we will replace it or cancel the order.
+      </p>
+      <p>
+        Once an order has been delivered and paid for, the sale is final — see
+        the <a href="/returns">Returns Policy</a>.
       </p>
 
       <h2>Questions</h2>

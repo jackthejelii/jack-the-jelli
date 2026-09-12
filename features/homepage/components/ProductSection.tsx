@@ -32,9 +32,10 @@ export default function ProductSection() {
 
             <Reveal index={1}>
               <p className="text-on-surface-variant mb-8 max-w-sm text-[18px] leading-[1.6]">
-                Hand-embossed with a flame motif, this bifold is our signature
-                piece. Full-grain leather that deepens with time. Six card
-                slots, one unlined bill compartment.
+                A sharp fusion of bold design and raw, modern edge.
+                Hand-embossed with our signature flame motif and cut from
+                premium, high-durability faux leather. Six precision-cut card
+                slots, an unlined cash compartment, clean-finished edges.
               </p>
             </Reveal>
 
@@ -51,7 +52,7 @@ export default function ProductSection() {
             <div className="group bg-surface-container relative aspect-4/5 overflow-hidden border border-[rgba(138,121,104,0.2)]">
               <Image
                 src={flameImage}
-                alt="A handcrafted leather bifold wallet with an embossed flame design"
+                alt="A handcrafted faux leather bifold wallet with an embossed flame design"
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 40vw"
                 loading="lazy"
@@ -75,7 +76,7 @@ export default function ProductSection() {
           <div className="group bg-surface-container relative mx-auto aspect-video w-full max-w-5xl overflow-hidden border border-[rgba(138,121,104,0.2)] md:aspect-21/9">
             <Image
               src={regularImage}
-              alt="A classic smooth leather bifold wallet in a natural tone"
+              alt="A classic smooth faux leather bifold wallet in a natural tone"
               fill
               sizes="(max-width: 768px) 100vw, 80vw"
               loading="lazy"
@@ -87,8 +88,10 @@ export default function ProductSection() {
           <div className="mt-12">
             <Reveal index={1}>
               <p className="text-on-surface-variant mx-auto mb-8 max-w-2xl text-[18px] leading-[1.6]">
-                Clean lines, no embellishment. A timeless bifold in full-grain
-                leather for those who prefer understated elegance.
+                Clean, minimal, and built for daily utility. Durable faux
+                leather with a smooth, refined finish, six card slots and a
+                dedicated cash compartment — timeless function in a slim,
+                low-profile fit.
               </p>
             </Reveal>
 

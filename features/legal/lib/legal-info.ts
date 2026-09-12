@@ -30,11 +30,10 @@ export const LEGAL_INFO = {
   contactPhone: "01641857905",
   /** TODO: confirm the handle. Stored without the `@`, which the UI adds. */
   instagram: "jackthejelli",
-  /**
-   * Confirmed: 7 days from delivery. Quoted by the returns page, the terms and
-   * the contact FAQ, so changing it here changes it everywhere.
-   */
-  returnWindowDays: 7,
+  // There is deliberately no `returnWindowDays` here any more. The shop's
+  // policy is that sales are final once an order has been delivered and paid
+  // for, and the remedy is refusal at the door before payment — see /returns,
+  // /terms and /shipping, which must always agree with each other.
   /** Confirmed: the courier window quoted at checkout and in the FAQ. */
   deliveryDaysMin: 5,
   /** Confirmed: the upper end of that same window. */

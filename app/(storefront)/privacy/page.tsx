@@ -24,8 +24,10 @@ export default function PrivacyPolicyPage() {
     >
       <h2>Who we are</h2>
       <p>
-        {LEGAL_INFO.legalName} sells leather goods at jackthejelli.com and
-        decides how the information described below is used. You can reach us at{" "}
+        {LEGAL_INFO.legalName} sells faux leather goods at jackthejelli.com and
+        decides how the information described below is used. We respect your
+        privacy and are committed to protecting the personal information you
+        share with us. You can reach us at{" "}
         <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
           {LEGAL_INFO.contactEmail}
         </a>{" "}
@@ -82,13 +84,28 @@ export default function PrivacyPolicyPage() {
         find slow and broken pages, nothing else.
       </p>
 
+      <h2>How we use it</h2>
+      <p>Your information is used to do these things and nothing else:</p>
+      <ul>
+        <li>process your order and confirm it with you by phone;</li>
+        <li>arrange delivery, and let the courier reach you;</li>
+        <li>send your order confirmation and any message about that order;</li>
+        <li>answer you when you contact us for support;</li>
+        <li>keep the records a business is expected to keep.</li>
+      </ul>
+      <p>
+        We do not use it for advertising, and we do not build a profile of you.
+      </p>
+
       <h2>Payment</h2>
       <p>
         <strong>
           We take cash on delivery only, so we never ask for and never hold card
           numbers, bank details or mobile-wallet credentials.
         </strong>{" "}
-        Payment is handled in person, by the courier, at your door.
+        Payment is handled in person, by the courier, at your door — there is no
+        payment gateway on this website and no card data for anyone, us
+        included, to store.
       </p>
 
       <h2>Who else processes it</h2>
@@ -121,8 +138,8 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
       <p>
-        We do not sell your information, and we do not share it for anyone
-        else&rsquo;s marketing.
+        We do not sell, rent or trade your personal information, and we do not
+        share it for anyone else&rsquo;s marketing.
       </p>
 
       <h2>How long we keep it</h2>
@@ -149,7 +166,7 @@ export default function PrivacyPolicyPage() {
         order number and the phone number it was placed with.
       </p>
 
-      <h2>Security</h2>
+      <h2>How we protect it</h2>
       <p>
         The site is served over HTTPS, passwords are stored only as hashes, and
         access to the admin dashboard is restricted to named accounts. No system
