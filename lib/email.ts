@@ -404,8 +404,20 @@ async function fetchReceivedEmail(emailId: string): Promise<{
   text?: string;
   html?: string;
 }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) throw new Error("RESEND_API_KEY is not set.");
+  // Reading a message needs a **Full access** key. Resend's permissions are
+  // only "Sending access" or "Full access", so the send key cannot be reused
+  // here — it returns 401 on this route, which is exactly how this first
+  // failed in production. `RESEND_INBOUND_API_KEY` keeps that broader key off
+  // the sending path, where it would otherwise widen the blast radius of a
+  // leak from "can send mail" to "can read every message we ever received".
+  // Falls back to the send key so a single full-access key also works.
+  const apiKey =
+    process.env.RESEND_INBOUND_API_KEY || process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "Inbound retrieval is not configured — set RESEND_INBOUND_API_KEY.",
+    );
+  }
 
   const response = await fetch(
     `https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}`,
@@ -416,8 +428,16 @@ async function fetchReceivedEmail(emailId: string): Promise<{
     // Thrown so the route 500s and Resend retries: a transient fetch failure
     // must not silently forward an empty message, which is indistinguishable
     // from a customer who wrote nothing.
+    //
+    // 401 is called out by name because it is not transient and retrying will
+    // never fix it — it means the key lacks Full access, and the message will
+    // sit unretrieved until someone reads this line.
+    const hint =
+      response.status === 401
+        ? " — the API key lacks Full access; a Sending-access key cannot read received mail"
+        : "";
     throw new Error(
-      `Could not retrieve received email ${emailId}: ${response.status}`,
+      `Could not retrieve received email ${emailId}: ${response.status}${hint}`,
     );
   }
 
