@@ -35,6 +35,24 @@ export default function SmoothScroll() {
       // Clicking a nav link mid-coast otherwise leaves inertia running into the
       // router's scroll-to-top, which reads as the new page drifting on entry.
       stopInertiaOnNavigate: true,
+      // Read the scroll limit live from the document on every wheel tick
+      // instead of trusting Lenis’ cached Dimensions. Cached, the limit is a
+      // snapshot taken when this effect runs and refreshed only by its
+      // ResizeObserver on <html> or a window resize — so anything that gives
+      // <html> a fixed height silently freezes it, and the page then hard-stops
+      // mid-scroll because the wheel is preventDefault()ed before the clamp.
+      // app/layout.tsx keeps <html> unsized so the observer does work; this is
+      // the belt to that pair of braces, and it costs two layout reads a tick.
+      naiveDimensions: true,
+      // Radix overlays (cart sheet, mobile nav, every select and dialog) mount
+      // react-remove-scroll, which sets `overflow: hidden` on <body> via
+      // [data-scroll-locked]. <html> has no overflow of its own, so that
+      // propagates to the viewport and collapses documentElement.scrollHeight
+      // for as long as the overlay is open. Bowing out here lets
+      // react-remove-scroll’s own non-passive handler do the blocking, rather
+      // than Lenis measuring against a collapsed page or scrolling it behind
+      // the overlay. <body> is in the path Lenis walks, so this matches.
+      prevent: (node) => node.hasAttribute("data-scroll-locked"),
     });
 
     let frame = requestAnimationFrame(function raf(time) {

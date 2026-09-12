@@ -109,7 +109,7 @@ export default function CartSheet() {
           </div>
         ) : (
           <>
-            <ul className="flex-1 overflow-y-auto px-6">
+            <ul data-lenis-prevent className="flex-1 overflow-y-auto px-6">
               {lines.map((line) => (
                 <CartLine
                   key={lineKey(line)}

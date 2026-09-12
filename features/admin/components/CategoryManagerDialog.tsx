@@ -205,7 +205,10 @@ export default function CategoryManagerDialog({
         </div>
 
         {/* Existing */}
-        <ul className="border-border max-h-64 divide-y overflow-y-auto border">
+        <ul
+          data-lenis-prevent
+          className="border-border max-h-64 divide-y overflow-y-auto border"
+        >
           {categories.length === 0 && (
             <li className="text-muted-foreground px-4 py-6 text-center text-sm">
               No categories yet.

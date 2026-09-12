@@ -53,7 +53,10 @@ function NavItems() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-2">
+    <div
+      data-lenis-prevent
+      className="flex flex-1 flex-col gap-2 overflow-y-auto px-2"
+    >
       {navItems.map((item) => {
         const isActive = activeHref === item.href;
         return (

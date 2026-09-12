@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { formatPrice } from "@/features/products/lib/format";
+import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -47,34 +48,105 @@ function sanitizeHeaderText(value: string, maxLength = 78): string {
 }
 
 /**
+ * A one-line excerpt for the inbox preview. Newlines collapse because the
+ * preview renders as a single run anyway, and an ellipsis marks the cut so a
+ * truncated sentence does not read as the whole message.
+ */
+function snippet(value: string, maxLength = 140): string {
+  const flat = value.replace(/\s+/g, " ").trim();
+  return flat.length > maxLength ? `${flat.slice(0, maxLength - 1)}…` : flat;
+}
+
+/**
+ * The palette from `app/globals.css`, restated as literals.
+ *
+ * Email has no custom properties and no stylesheet — every rule is inline — so
+ * these cannot reference the real tokens and have to be kept in step by hand.
+ * Named rather than scattered so a palette change is one edit here instead of
+ * forty hex strings through the templates.
+ */
+const INK = "#1a1a1a"; // --foreground
+const PAPER = "#faf9f6"; // --background, the card
+const GROUND = "#f3f1ed"; // --muted, the ground behind the card
+const RULE = "#e8e5df"; // --border
+const BROWN = "#8a7968"; // --secondary, muted text and labels
+const BODY_INK = "#444444"; // body copy, a step down from INK
+
+/**
+ * Stand-ins for the site's two faces. Neither EB Garamond nor Inter is a
+ * web-safe email font and `@font-face` is unreliable across clients, so the
+ * headings fall back to the same Georgia stack `--font-serif` declares and the
+ * body to the system sans stack Inter would otherwise head.
+ */
+const SERIF = "Georgia, 'Times New Roman', serif";
+const SANS =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+/**
  * The one email template. Originally single-CTA shaped for the auth links;
  * `summaryHtml` was added so an order confirmation can carry an itemised block
  * without a second template drifting away from this one's styling.
  *
  * Every parameter is escaped except `summaryHtml`, which is the sole trusted
  * HTML slot — it may only ever be fed markup this module built itself.
+ *
+ * Built out of `<table>` rather than `<div>`: Outlook's Word rendering engine
+ * ignores `max-width` on a div, so a div-centred layout runs the full width of
+ * the window there. The nested-table pattern is ugly and is what every email
+ * client has agreed on.
  */
 function renderEmailHtml(
   heading: string,
   bodyText: string,
   action?: EmailAction,
   summaryHtml?: string,
+  preheader?: string,
 ) {
   const url = action ? escapeHtml(action.url) : "";
+  const site = process.env.BETTER_AUTH_URL?.replace(/\/$/, "");
 
   return `
-    <div style="font-family: Georgia, 'Times New Roman', serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; color: #1a1a1a;">
-      <h1 style="font-size: 20px; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 24px;">Jack The Jelli</h1>
-      <h2 style="font-size: 18px; font-weight: normal; margin-bottom: 16px;">${escapeHtml(heading)}</h2>
-      <p style="font-size: 15px; line-height: 1.6; color: #444; margin-bottom: 24px;">${escapeHtml(bodyText)}</p>
-      ${summaryHtml ?? ""}
-      ${
-        action
-          ? `<a href="${url}" style="display: inline-block; background: #1a1a1a; color: #f9f8f6; text-decoration: none; padding: 14px 28px; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">${escapeHtml(action.label)}</a>
-      <p style="font-size: 12px; color: #8a7968; margin-top: 32px;">If the button doesn't work, copy this link: ${url}</p>`
-          : ""
-      }
-    </div>
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(
+      preheader ?? bodyText,
+    )}</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${GROUND};margin:0;padding:0;">
+      <tr>
+        <td align="center" style="padding:32px 12px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:${PAPER};border:1px solid ${RULE};">
+            <tr>
+              <td style="padding:32px 36px 20px;border-bottom:1px solid ${RULE};">
+                <div style="font-family:${SERIF};font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:${INK};">Jack The Jelli</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 36px 36px;font-family:${SANS};">
+                <h1 style="margin:0 0 14px;font-family:${SERIF};font-size:22px;font-weight:normal;line-height:1.3;color:${INK};">${escapeHtml(heading)}</h1>
+                <p style="margin:0 0 26px;font-family:${SANS};font-size:15px;line-height:1.65;color:${BODY_INK};">${escapeHtml(bodyText)}</p>
+                ${summaryHtml ?? ""}
+                ${
+                  action
+                    ? `<a href="${url}" style="display:inline-block;background:${INK};color:${PAPER};text-decoration:none;padding:14px 28px;font-family:${SANS};font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">${escapeHtml(action.label)}</a>
+                <p style="margin:28px 0 0;font-family:${SANS};font-size:12px;line-height:1.6;color:${BROWN};word-break:break-all;">If the button doesn't work, copy this link: ${url}</p>`
+                    : ""
+                }
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 36px 28px;border-top:1px solid ${RULE};font-family:${SANS};font-size:12px;line-height:1.7;color:${BROWN};">
+                <div style="color:${INK};">${escapeHtml(LEGAL_INFO.brand)}</div>
+                <div>${escapeHtml(LEGAL_INFO.address)}</div>
+                <div>${escapeHtml(LEGAL_INFO.contactEmail)} &middot; ${escapeHtml(LEGAL_INFO.contactPhone)}</div>
+                ${
+                  site
+                    ? `<div style="padding-top:10px;"><a href="${escapeHtml(site)}" style="color:${BROWN};">${escapeHtml(site.replace(/^https?:\/\//, ""))}</a></div>`
+                    : ""
+                }
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   `;
 }
 
@@ -85,6 +157,13 @@ interface SendEmailParams {
   bodyText: string;
   action?: EmailAction;
   summaryHtml?: string;
+  /**
+   * The grey line an inbox shows after the subject. Left unset it falls back to
+   * `bodyText`, which for a contact notification is boilerplate — so the one
+   * line of the message visible without opening it says "Reply to this email"
+   * rather than what the customer actually wrote. Pass the interesting part.
+   */
+  preheader?: string;
   /** What the dev-mode log line should show in place of a link. */
   devDetail?: string;
   /**
@@ -117,6 +196,7 @@ async function sendEmail({
   bodyText,
   action,
   summaryHtml,
+  preheader,
   devDetail,
   from,
   replyTo,
@@ -155,7 +235,7 @@ async function sendEmail({
     to,
     replyTo: replyTo ?? process.env.SUPPORT_EMAIL,
     subject,
-    html: renderEmailHtml(heading, bodyText, action, summaryHtml),
+    html: renderEmailHtml(heading, bodyText, action, summaryHtml, preheader),
   });
 
   if (error) {
@@ -214,34 +294,32 @@ function renderOrderSummary({
   deliveryFee,
   totalAmount,
 }: Omit<OrderConfirmationParams, "to" | "customerName">) {
+  const cell = `padding:8px 0;font-family:${SANS};font-size:14px;`;
   const rows = items
     .map(
       (line) => `
       <tr>
-        <td style="padding: 8px 0; font-size: 14px; color: #1a1a1a;">${escapeHtml(line.name)}${line.color ? ` <span style="color: #8a7968;">(${escapeHtml(line.color)})</span>` : ""} <span style="color: #8a7968;">× ${line.qty}</span></td>
-        <td style="padding: 8px 0; font-size: 14px; text-align: right; color: #1a1a1a;">${formatPrice(line.lineTotal)}</td>
+        <td style="${cell}color:${INK};">${escapeHtml(line.name)}${line.color ? ` <span style="color:${BROWN};">(${escapeHtml(line.color)})</span>` : ""} <span style="color:${BROWN};">× ${line.qty}</span></td>
+        <td style="${cell}text-align:right;color:${INK};white-space:nowrap;">${formatPrice(line.lineTotal)}</td>
       </tr>`,
     )
     .join("");
 
+  const totalRow = (label: string, value: string, strong = false) => `
+        <tr>
+          <td style="padding:4px 0;font-family:${SANS};font-size:${strong ? 15 : 14}px;color:${strong ? INK : BODY_INK};">${label}</td>
+          <td style="padding:4px 0;font-family:${SANS};font-size:${strong ? 15 : 14}px;text-align:right;color:${strong ? INK : BODY_INK};white-space:nowrap;">${value}</td>
+        </tr>`;
+
   return `
-    <div style="border-top: 1px solid #e8e5df; border-bottom: 1px solid #e8e5df; padding: 20px 0; margin-bottom: 28px;">
-      <p style="font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #8a7968; margin: 0 0 12px;">Order ${escapeHtml(orderNumber)}</p>
-      <table style="width: 100%; border-collapse: collapse;">
+    <div style="border-top:1px solid ${RULE};border-bottom:1px solid ${RULE};padding:20px 0;margin-bottom:28px;">
+      <p style="margin:0 0 12px;font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${BROWN};">Order ${escapeHtml(orderNumber)}</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
         ${rows}
-        <tr><td colspan="2" style="border-top: 1px solid #e8e5df; padding-top: 12px;"></td></tr>
-        <tr>
-          <td style="padding: 4px 0; font-size: 14px; color: #444;">Subtotal</td>
-          <td style="padding: 4px 0; font-size: 14px; text-align: right; color: #444;">${formatPrice(subtotal)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 4px 0; font-size: 14px; color: #444;">Delivery</td>
-          <td style="padding: 4px 0; font-size: 14px; text-align: right; color: #444;">${deliveryFee === 0 ? "Free" : formatPrice(deliveryFee)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0 0; font-size: 15px; color: #1a1a1a;">Total due on delivery</td>
-          <td style="padding: 8px 0 0; font-size: 15px; text-align: right; color: #1a1a1a;">${formatPrice(totalAmount)}</td>
-        </tr>
+        <tr><td colspan="2" style="border-top:1px solid ${RULE};padding-top:12px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        ${totalRow("Subtotal", formatPrice(subtotal))}
+        ${totalRow("Delivery", deliveryFee === 0 ? "Free" : formatPrice(deliveryFee))}
+        ${totalRow("Total due on delivery", formatPrice(totalAmount), true)}
       </table>
     </div>
   `;
@@ -285,6 +363,7 @@ export async function sendOrderConfirmationEmail({
           url: `${baseUrl}/track?order=${encodeURIComponent(orderNumber)}`,
         }
       : undefined,
+    preheader: `${items.length} item${items.length === 1 ? "" : "s"} · ${formatPrice(totalAmount)} due on delivery`,
     devDetail: `order ${orderNumber}, ${formatPrice(totalAmount)} COD`,
   });
 }
@@ -321,26 +400,33 @@ function renderContactSummary({
   phone,
   message,
 }: ContactNotificationParams) {
-  const row = (label: string, value: string) => `
-    <tr>
-      <td style="padding: 4px 16px 4px 0; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #8a7968; white-space: nowrap; vertical-align: top;">${escapeHtml(label)}</td>
-      <td style="padding: 4px 0; font-size: 14px; color: #1a1a1a;">${escapeHtml(value)}</td>
-    </tr>`;
-
   // Escape first, then turn the surviving newlines into breaks. The other order
   // would escape the tags this just wrote.
   const body = escapeHtml(message).replace(/\r?\n/g, "<br />");
 
   return `
-    <div style="border-top: 1px solid #e8e5df; border-bottom: 1px solid #e8e5df; padding: 20px 0; margin-bottom: 28px;">
-      <table style="width: 100%; border-collapse: collapse;">
-        ${row("Name", name)}
-        ${row("Email", email)}
-        ${phone ? row("Phone", phone) : ""}
+    <div style="border-top:1px solid ${RULE};border-bottom:1px solid ${RULE};padding:20px 0;margin-bottom:28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+        ${metaRow("Name", name)}
+        ${metaRow("Email", email)}
+        ${phone ? metaRow("Phone", phone) : ""}
       </table>
-      <p style="margin: 20px 0 0; font-size: 15px; line-height: 1.6; color: #1a1a1a;">${body}</p>
+      <p style="margin:20px 0 0;font-family:${SANS};font-size:15px;line-height:1.65;color:${INK};">${body}</p>
     </div>
   `;
+}
+
+/**
+ * A label/value line in the bordered blocks. Shared so the contact notification
+ * and the forwarded message render identically — the two kinds of mail the shop
+ * receives should look like one shop, not two systems.
+ */
+function metaRow(label: string, value: string): string {
+  return `
+    <tr>
+      <td style="padding:4px 16px 4px 0;font-family:${SANS};font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${BROWN};white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:4px 0;font-family:${SANS};font-size:14px;color:${INK};">${escapeHtml(value)}</td>
+    </tr>`;
 }
 
 /**
@@ -354,6 +440,15 @@ function renderContactSummary({
  *
  * The customer's name reaches a header here, so it goes through
  * `sanitizeHeaderText` rather than `escapeHtml`.
+ *
+ * It is delivered straight to the owner's inbox rather than to `SUPPORT_EMAIL`.
+ * Aiming it at `support@` worked, but the message then took the long way round —
+ * out to Resend's inbound endpoint, back through `forwardInboundEmail`, and into
+ * the owner's inbox wrapped in a *second* copy of this template. The brand name,
+ * the sender's address and "reply to answer them directly" each appeared twice.
+ * Two sends against a 100/day tier, for a message we composed ourselves and
+ * already know how to address. `SUPPORT_EMAIL` stays the fallback so an
+ * environment without `SUPPORT_FORWARD_TO` still delivers somewhere real.
  */
 export async function sendContactNotificationEmail({
   name,
@@ -361,9 +456,11 @@ export async function sendContactNotificationEmail({
   phone,
   message,
 }: ContactNotificationParams) {
-  const inbox = process.env.SUPPORT_EMAIL;
+  const inbox = process.env.SUPPORT_FORWARD_TO || process.env.SUPPORT_EMAIL;
   if (!inbox) {
-    throw new Error("Contact email is not configured — set SUPPORT_EMAIL.");
+    throw new Error(
+      "Contact email is not configured — set SUPPORT_FORWARD_TO or SUPPORT_EMAIL.",
+    );
   }
 
   const displayName = sanitizeHeaderText(name) || "Someone";
@@ -379,6 +476,7 @@ export async function sendContactNotificationEmail({
     heading: "New message from the contact form",
     bodyText: `Reply to this email to answer ${displayName} directly.`,
     summaryHtml: renderContactSummary({ name, email, phone, message }),
+    preheader: snippet(message),
     devDetail: `contact message from ${email}`,
   });
 }
@@ -506,26 +604,39 @@ export async function forwardInboundEmail({
       ? sanitizeHeaderText(subject, 120)
       : "(no subject) — forwarded from the shop inbox",
     heading: `Mail to ${sanitizeHeaderText(to ?? "the shop", 60)}`,
+    // Deliberately does not repeat the sender's address: it is already in the
+    // From header the mail client shows, and again in the block below. Saying
+    // it a third time is how this template started reading like a form.
     bodyText: hasReply
-      ? `From ${senderLabel}. Reply to this email to answer them directly.`
-      : "Forwarded from the shop inbox. This message carried no usable reply address.",
+      ? "Reply to this email to answer them directly."
+      : "This message carried no usable reply address.",
     // The only caller-supplied HTML this module ever renders. An inbound
     // message is a stranger's markup, so it is NOT passed through to
     // `summaryHtml`, which is the trusted slot — the plain-text part is escaped
     // and wrapped instead. A forwarded copy that loses styling is a fair price
     // for not rendering an attacker's HTML in the owner's mail client.
-    summaryHtml: renderForwardedBody(text, html),
+    summaryHtml: renderForwardedBody(senderLabel, text, html),
+    preheader: text ? snippet(text) : undefined,
     devDetail: `inbound mail from ${senderLabel}`,
   });
 }
 
 /**
- * Renders the forwarded message body, preferring the plain-text part.
+ * Renders the forwarded message: who wrote it, then what they wrote.
  *
- * When a sender provides only HTML, the tags are stripped rather than trusted:
- * see the note in `forwardInboundEmail` about whose markup this is.
+ * Shaped to match `renderContactSummary` — the same bordered block and the same
+ * label-caps meta row — so the two kinds of mail the owner receives look like
+ * they came from one shop rather than two systems.
+ *
+ * The body prefers the plain-text part. When a sender provides only HTML the
+ * tags are stripped rather than trusted: see the note in `forwardInboundEmail`
+ * about whose markup this is.
  */
-function renderForwardedBody(text?: string, html?: string): string {
+function renderForwardedBody(
+  from: string,
+  text?: string,
+  html?: string,
+): string {
   const source =
     text?.trim() ||
     html
@@ -536,7 +647,12 @@ function renderForwardedBody(text?: string, html?: string): string {
       .trim() ||
     "(this message had no readable body)";
 
-  return `<div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:#111;">${escapeHtml(
-    source,
-  )}</div>`;
+  return `
+    <div style="border-top:1px solid ${RULE};border-bottom:1px solid ${RULE};padding:20px 0;margin-bottom:28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+        ${metaRow("From", from)}
+      </table>
+      <p style="margin:20px 0 0;white-space:pre-wrap;font-family:${SANS};font-size:15px;line-height:1.65;color:${INK};">${escapeHtml(source)}</p>
+    </div>
+  `;
 }

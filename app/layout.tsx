@@ -64,9 +64,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  /* No height on <html> — deliberately. Lenis (SmoothScroll below) tracks
+   page height with a ResizeObserver on document.documentElement, and a
+   ResizeObserver watches the *content box*: `height: 100%` pins that box
+   to the viewport, so it never fires as content loads and Lenis is left
+   clamping every wheel event against the height the page had at
+   hydration. The page then hard-stops mid-scroll with no native fallback,
+   because Lenis preventDefault()s the wheel before it clamps. Lenis ships
+   `html.lenis, html.lenis body { height: auto }` in lenis.css for exactly
+   this reason (imported in app/globals.css); leaving it off here means the
+   two agree instead of overriding each other. Hence min-h-dvh on <body>
+   rather than min-h-full: a percentage min-height needs a sized parent,
+   and <html> no longer is one. */
   return (
-    <html lang="en" className={`${garamond.variable} ${inter.variable} h-full`}>
-      <body className="text-primary m-0 flex min-h-full flex-col font-(--font-inter) antialiased">
+    <html lang="en" className={`${garamond.variable} ${inter.variable}`}>
+      <body className="text-primary m-0 flex min-h-dvh flex-col font-(--font-inter) antialiased">
         {/* Storefront chrome (nav + footer) lives in app/(storefront)/layout.tsx
             so /admin opts out by route rather than by a pathname check. */}
         {children}
@@ -74,7 +86,9 @@ export default function RootLayout({
             storefront, the auth pages and /admin alike. */}
         <RouteProgress />
         {/* Lenis smooth scroll. Renders nothing and binds to the window, so it
-            covers every route group; opts out entirely under reduced motion. */}
+            covers every route group. It runs at every OS motion setting — the
+            reduced-motion opt-out was removed with the rest of the project's
+            reduced-motion handling (see the note in app/globals.css). */}
         <SmoothScroll />
         <Toaster />
         {/* Real-user Core Web Vitals. Renders nothing and loads its script

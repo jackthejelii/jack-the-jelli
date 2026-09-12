@@ -288,6 +288,7 @@ export default function CollectionSearch({
           role="listbox"
           aria-label="Search suggestions"
           aria-busy={isLoading || undefined}
+          data-lenis-prevent
           /* max-h: a matched category can pull in a full six rows plus the
              footer, which ran off the bottom of the viewport at the top of the
              page. Scroll inside the panel rather than off the screen. */

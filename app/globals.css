@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Lenis ships required CSS that nothing else provides. Three of its rules are
+   load-bearing here: `.lenis-stopped { overflow: clip }` (without it lenis.stop()
+   stops nothing), `.lenis [data-lenis-prevent] { overscroll-behavior: contain }`
+   (the inner scrollers in the cart sheet, the collection search dropdown and the
+   Radix select/dropdown menus rely on it to stop scroll chaining to the page), and
+   `.lenis.lenis-smooth iframe { pointer-events: none }`. Its first rule,
+   `html.lenis, html.lenis body { height: auto }`, is why <html> carries no
+   height class in app/layout.tsx — see the comment there. */
+@import "lenis/dist/lenis.css";
 
 @custom-variant dark (&:is(.dark *));
 
