@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { Types } from "mongoose";
 import { getSession } from "@/lib/auth-guard";
 import { connectDB } from "@/lib/db";
+import { getSettings, toDeliveryRates } from "@/lib/settings";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 import { getDuplicateKeyFields } from "@/lib/mongo-errors";
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
@@ -18,6 +19,7 @@ import {
 // happen to have been written for the admin actions first.
 import { collectValues, toFieldErrors } from "@/features/admin/lib/form-state";
 import type { UnavailableLine } from "@/features/cart/lib/types";
+import { ORDERS_TAG } from "@/features/orders/lib/cache-tags";
 import {
   CHECKOUT_VALUE_FIELDS,
   checkoutSchema,
@@ -99,6 +101,30 @@ export async function placeOrder(
       ok: false,
       values,
       message: "Too many attempts. Please wait a minute and try again.",
+    };
+  }
+
+  // The shop's own settings, read once and used for two things below: whether
+  // orders are being taken at all, and what delivery costs.
+  //
+  // A cached read, so this is not a database round trip per checkout — see
+  // getSettings(). It also cannot throw, which is why it is safe to have it
+  // this early, ahead of the try/catch: a settings failure falls back to the
+  // rates this codebase shipped with rather than refusing the order.
+  const settings = await getSettings();
+
+  // Refused server-side, not merely hidden in the UI. /checkout stops
+  // rendering the form while the shop is closed, but the form is a public HTTP
+  // endpoint: a tab opened before the switch was flipped still holds a live
+  // one, and a direct POST never saw the page at all. This is the only check
+  // that actually stops an order.
+  if (settings.maintenanceMode || settings.ordersPaused) {
+    return {
+      ok: false,
+      values,
+      message: settings.maintenanceMode
+        ? settings.maintenanceMessage
+        : settings.ordersPausedMessage,
     };
   }
 
@@ -288,7 +314,15 @@ export async function placeOrder(
         0,
       );
       const deliveryZone = getDeliveryZone(district);
-      const deliveryFee = getDeliveryFee(deliveryZone, subtotal);
+      // Priced from the shop's settings, read server-side at the top of this
+      // action — never from anything the client sent. The checkout page quotes
+      // the same numbers, but only so the customer can see them; this is the
+      // figure that becomes money, and it is computed here from scratch.
+      const deliveryFee = getDeliveryFee(
+        deliveryZone,
+        subtotal,
+        toDeliveryRates(settings),
+      );
       const totalAmount = subtotal + deliveryFee;
 
       // Attach the order to the account when there is one, but never require
@@ -512,7 +546,8 @@ export async function placeOrder(
     }
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+  revalidateTag(ORDERS_TAG, "max");
   revalidatePath("/collection");
   for (const line of summary?.items ?? []) {
     revalidatePath(`/collection/${line.slug}`);

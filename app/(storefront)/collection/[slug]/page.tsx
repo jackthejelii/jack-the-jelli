@@ -3,6 +3,8 @@ import { cacheLife } from "next/cache";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProductDetailView from "@/features/products/components/ProductDetailView";
+import { getSettings } from "@/lib/settings";
+import { shippingCopy } from "@/features/products/lib/product-copy";
 import RelatedProductsSection from "@/features/products/components/RelatedProductsSection";
 import RelatedProductsSkeleton from "@/features/products/components/RelatedProductsSkeleton";
 import {
@@ -126,6 +128,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   if (!product) notFound();
 
+  // Also a cached read, so it joins this page's cache entry rather than
+  // opening a database round trip per request — and because it carries the
+  // settings tag, saving a new delivery fee expires this page's copy of the
+  // spec list along with everything else that quotes one.
+  const settings = await getSettings();
+
   return (
     <>
       {/* Rendered here rather than inside ProductDetailView, which is a client
@@ -144,7 +152,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
           { name: product.name, path: `/collection/${product.slug}` },
         ])}
       />
-      <ProductDetailView product={product} />
+      <ProductDetailView
+        product={product}
+        lowStockThreshold={settings.lowStockThreshold}
+        shippingCopy={shippingCopy(settings)}
+      />
       {/* Streams in after the piece itself — the suggestions never hold up
           first paint. */}
       <Suspense fallback={<RelatedProductsSkeleton />}>

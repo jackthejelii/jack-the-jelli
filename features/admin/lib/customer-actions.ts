@@ -263,7 +263,7 @@ export async function deleteCustomer(
 
   revalidatePath("/admin/customers");
   // The orders list and every order detail page now carry the deleted badge.
-  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
   return {
     ok: true,
     message: `${name} has been deleted. Their orders remain on the books.`,

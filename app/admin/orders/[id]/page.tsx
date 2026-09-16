@@ -44,7 +44,7 @@ export default async function AdminOrderDetailPage({
       <header className="border-border flex flex-col gap-4 border-b pb-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-4">
           <Link
-            href="/admin"
+            href="/admin/orders"
             className="text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
           >
             <ArrowLeft className="size-4" />

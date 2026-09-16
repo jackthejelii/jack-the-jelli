@@ -18,6 +18,7 @@ import {
 } from "@/features/checkout/lib/checkout-form";
 import { emptyCheckoutState } from "@/features/checkout/lib/checkout-state";
 import { placeOrder } from "@/features/checkout/lib/order-actions";
+import type { DeliveryRates } from "@/features/checkout/lib/delivery";
 
 export interface CheckoutDefaults {
   fullName?: string;
@@ -37,8 +38,16 @@ export interface CheckoutDefaults {
  */
 export default function CheckoutView({
   defaults,
+  rates,
 }: {
   defaults: CheckoutDefaults;
+  /**
+   * The shop's live delivery rates, read on the server and handed down. This
+   * column only ever *quotes* them — `placeOrder` reads them again and
+   * reprices the order from scratch, so a stale tab shows an old figure and
+   * still gets charged the current one.
+   */
+  rates: DeliveryRates;
 }) {
   const [state, formAction, pending] = useActionState(
     placeOrder,
@@ -311,6 +320,7 @@ export default function CheckoutView({
             unavailable={blockers}
             blocked={soldOut.length > 0}
             notice={state.unavailable ? state.message : undefined}
+            rates={rates}
           />
         </div>
       </div>

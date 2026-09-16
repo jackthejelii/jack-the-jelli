@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getSettings } from "@/lib/settings";
 import AppLink from "@/components/layout/AppLink";
 import Logo from "@/components/layout/Logo";
 import MobileNav from "@/components/layout/MobileNav";
@@ -15,8 +16,15 @@ import CartSheet from "@/features/cart/components/CartSheet";
  * carries its
  * own "use client", and they coordinate through the module-level cart store
  * rather than a shared context, so each can be its own client root.
+ *
+ * Async now, only to read the free-delivery threshold the cart sheet quotes.
+ * That read is cached (`getSettings`), so it costs no round trip and — more
+ * importantly under Cache Components — it does not make the nav dynamic. The
+ * static shell every storefront page prerenders is unchanged.
  */
-export default function NavBar() {
+export default async function NavBar() {
+  const { freeDeliveryThreshold } = await getSettings();
+
   return (
     <nav className="border-border scrollbar-lock-safe bg-background/60 fixed inset-x-0 top-0 z-50 h-24 border-b backdrop-blur-md">
       <div className="relative mx-auto flex h-full max-w-360 items-center justify-center px-5 md:px-16">
@@ -76,7 +84,7 @@ export default function NavBar() {
           revalidation survive client navigations. Closed, it renders nothing,
           so it needs no placeholder. */}
       <Suspense fallback={null}>
-        <CartSheet />
+        <CartSheet freeDeliveryThreshold={freeDeliveryThreshold} />
       </Suspense>
 
       {/* Renders nothing. Here for the same reason: the cart has to be checked

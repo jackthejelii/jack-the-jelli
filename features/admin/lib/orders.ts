@@ -1,6 +1,7 @@
 // Mongoose 9 renamed FilterQuery -> QueryFilter.
 import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { escapeRegex } from "@/lib/slug";
 import { Order, type IOrder } from "@/models";
 import { normalizeBdPhone } from "@/features/orders/lib/phone";
@@ -22,10 +23,10 @@ import type {
 // Server-only: pulls in Mongoose. Everything here returns plain, serializable
 // objects because Mongoose docs don't cross the server/client boundary (§6.3).
 
-const ORDERS_PER_PAGE = 10;
-
-/** How long a Draft may hold stock before the sweep may release it. */
-export const STALE_DRAFT_MINUTES = 15;
+// Rows per page and the stale-draft window are both shop settings now
+// (`ordersPerPage`, `staleDraftMinutes`), read per call rather than fixed
+// here. The defaults in lib/settings.ts are the 10 and 15 this file used to
+// declare, so an unconfigured shop paginates and sweeps exactly as before.
 
 export interface AdminOrderQuery {
   q?: string;
@@ -75,6 +76,7 @@ export async function getOrders({
   page = 1,
 }: AdminOrderQuery): Promise<AdminOrderListResult> {
   await connectDB();
+  const { ordersPerPage, staleDraftMinutes } = await getSettings();
 
   // Draft is excluded everywhere: it's the in-flight stock claim, not an order.
   const base: QueryFilter<IOrder> = {
@@ -89,7 +91,7 @@ export async function getOrders({
     ...(status ? { status } : {}),
   };
 
-  const staleBefore = new Date(Date.now() - STALE_DRAFT_MINUTES * 60_000);
+  const staleBefore = new Date(Date.now() - staleDraftMinutes * 60_000);
 
   const [total, grouped, staleDraftCount] = await Promise.all([
     Order.countDocuments(filter),
@@ -116,13 +118,13 @@ export async function getOrders({
     counts.all += row.count;
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / ORDERS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / ordersPerPage));
   const currentPage = Math.min(Math.max(1, page), totalPages);
 
   const orders = await Order.find(filter)
     .sort({ createdAt: -1 })
-    .skip((currentPage - 1) * ORDERS_PER_PAGE)
-    .limit(ORDERS_PER_PAGE)
+    .skip((currentPage - 1) * ordersPerPage)
+    .limit(ordersPerPage)
     .lean<LeanOrder[]>();
 
   return {

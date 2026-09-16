@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getSettings } from "@/lib/settings";
 import LegalDocument from "@/features/legal/components/LegalDocument";
 import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
@@ -20,7 +21,13 @@ export const metadata: Metadata = {
  * hands. /returns and /shipping say the same thing in the same words, and the
  * three must be changed together or the shop is publishing two policies.
  */
-export default function TermsOfServicePage() {
+export default async function TermsOfServicePage() {
+  // Contact details are shop settings now — the owner can change the published
+  // address or number from /admin/settings without a deploy. `legalName` stays
+  // on LEGAL_INFO: the legal entity a customer contracts with is not something
+  // an admin form should be able to rewrite.
+  const { contactEmail, contactPhone, address } = await getSettings();
+
   return (
     <LegalDocument
       title="Terms of Service"
@@ -29,12 +36,9 @@ export default function TermsOfServicePage() {
       <h2>These terms</h2>
       <p>
         By placing an order at jackthejelli.com you agree to what follows. We
-        are {LEGAL_INFO.legalName}, of {LEGAL_INFO.address}. If anything here is
-        unclear, ask us before you order: {LEGAL_INFO.contactPhone} or{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>
-        .
+        are {LEGAL_INFO.legalName}, of {address}. If anything here is unclear,
+        ask us before you order: {contactPhone} or{" "}
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
       </p>
       <p>
         You must be 18 or older to order, or have the agreement of a parent or
@@ -171,11 +175,8 @@ export default function TermsOfServicePage() {
 
       <h2>Contact</h2>
       <p>
-        {LEGAL_INFO.contactPhone} ·{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>{" "}
-        · {LEGAL_INFO.address}
+        {contactPhone} · <a href={`mailto:${contactEmail}`}>{contactEmail}</a> ·{" "}
+        {address}
       </p>
     </LegalDocument>
   );

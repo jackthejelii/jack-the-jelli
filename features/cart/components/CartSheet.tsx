@@ -20,10 +20,7 @@ import {
 import { useCartRevalidation } from "@/features/cart/hooks/useCartRevalidation";
 import { lineKey } from "@/features/cart/lib/types";
 import CartLine from "@/features/cart/components/CartLine";
-import {
-  amountToFreeDelivery,
-  FREE_DELIVERY_THRESHOLD,
-} from "@/features/checkout/lib/delivery";
+import { amountToFreeDelivery } from "@/features/checkout/lib/delivery";
 import { formatPrice } from "@/features/products/lib/format";
 
 /**
@@ -31,8 +28,16 @@ import { formatPrice } from "@/features/products/lib/format";
  * open/closed state and the revalidation it triggers survive navigation.
  *
  * There is deliberately no /cart page — this plus /checkout is the whole flow.
+ *
+ * The free-delivery threshold arrives as a prop from the NavBar rather than
+ * being imported: it is a shop setting now, and this component runs in the
+ * browser. Only the one number is passed, not the whole settings object.
  */
-export default function CartSheet() {
+export default function CartSheet({
+  freeDeliveryThreshold,
+}: {
+  freeDeliveryThreshold: number;
+}) {
   const isOpen = useCartStore((state) => state.isOpen);
   const setOpen = useCartStore((state) => state.setOpen);
   const closeCart = useCartStore((state) => state.closeCart);
@@ -55,7 +60,7 @@ export default function CartSheet() {
   const lines = hydrated ? items : [];
   const count = cartCount(lines);
   const subtotal = cartSubtotal(lines);
-  const shortfall = amountToFreeDelivery(subtotal);
+  const shortfall = amountToFreeDelivery(subtotal, freeDeliveryThreshold);
   const hasSoldOut = lines.some((line) => line.maxQty === 0);
 
   return (
@@ -131,7 +136,7 @@ export default function CartSheet() {
 
               <p className="text-on-surface-variant mt-2 text-[13px] leading-relaxed">
                 {shortfall > 0
-                  ? `Delivery calculated at checkout. Free above ${formatPrice(FREE_DELIVERY_THRESHOLD)}.`
+                  ? `Delivery calculated at checkout. Free above ${formatPrice(freeDeliveryThreshold)}.`
                   : "Delivery is on us."}
               </p>
 

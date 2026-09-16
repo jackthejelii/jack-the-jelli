@@ -17,8 +17,8 @@ import type {
   ProductDetailVariant,
 } from "@/features/products/lib/types";
 
-function stockLabel(stock: number) {
-  switch (getStockStatus(stock)) {
+function stockLabel(stock: number, lowStockThreshold: number) {
+  switch (getStockStatus(stock, lowStockThreshold)) {
     case "out-of-stock":
       return "Sold out";
     case "low-stock":
@@ -57,8 +57,18 @@ const COLUMN_ENTRANCE =
  */
 export default function ProductDetailView({
   product,
+  lowStockThreshold,
+  shippingCopy,
 }: {
   product: ProductDetail;
+  /**
+   * "How low is low", read from the shop's settings on the server. A required
+   * prop rather than a defaulted one so a future caller cannot silently fall
+   * back to the shipped 5 after the owner has changed it.
+   */
+  lowStockThreshold: number;
+  /** The delivery sentence for the spec list, built from live settings. */
+  shippingCopy: string;
 }) {
   // Opens on the first colourway with stock — see defaultVariant.
   const [selectedId, setSelectedId] = useState(
@@ -74,7 +84,7 @@ export default function ProductDetailView({
     ? selected.images
     : [{ url: "/image-placeholder.jpg" }];
 
-  const stockStatus = getStockStatus(selected?.stock ?? 0);
+  const stockStatus = getStockStatus(selected?.stock ?? 0, lowStockThreshold);
   const soldOut = stockStatus === "out-of-stock";
 
   // The nearest colourway that can actually be bought, offered when the
@@ -198,7 +208,7 @@ export default function ProductDetailView({
                 />
                 {/* About the selected colour, not the piece: a sold-out black
                     says nothing about the tan sitting next to it. */}
-                {stockLabel(selected?.stock ?? 0)}
+                {stockLabel(selected?.stock ?? 0, lowStockThreshold)}
               </p>
               {selected && (
                 <AddToCartButton
@@ -234,6 +244,7 @@ export default function ProductDetailView({
             <ProductSpecList
               material={product.material}
               dimensions={product.dimensions}
+              shippingCopy={shippingCopy}
             />
           </div>
         </div>

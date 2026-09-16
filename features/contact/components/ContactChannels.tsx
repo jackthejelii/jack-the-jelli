@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { sectionHeadingClassName } from "@/features/checkout/lib/checkout-form";
-import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
+import { getSettings } from "@/lib/settings";
 import { formatBdPhone } from "@/features/orders/lib/phone";
 
 interface Channel {
@@ -23,25 +23,34 @@ interface Channel {
  * Rendered as a ruled index rather than cards. Same information, but a card
  * would frame each channel as an offer to consider; a ruled row reads as a
  * directory entry, which is what someone looking for a phone number wants.
+ *
+ * A function of the shop's settings rather than a module constant: both the
+ * number and the handle are editable from /admin/settings, and a constant
+ * built at module load would be whichever values the server booted with.
  */
-const CHANNELS: Channel[] = [
-  {
-    label: "Phone",
-    value: formatBdPhone(LEGAL_INFO.contactPhone),
-    detail: "Speak to someone directly",
-    href: `tel:${LEGAL_INFO.contactPhone}`,
-    external: false,
-  },
-  {
-    label: "Instagram",
-    value: `@${LEGAL_INFO.instagram}`,
-    detail: "Send us a DM",
-    href: `https://instagram.com/${LEGAL_INFO.instagram}`,
-    external: true,
-  },
-];
+function channels(contactPhone: string, instagram: string): Channel[] {
+  return [
+    {
+      label: "Phone",
+      value: formatBdPhone(contactPhone),
+      detail: "Speak to someone directly",
+      href: `tel:${contactPhone}`,
+      external: false,
+    },
+    {
+      label: "Instagram",
+      value: `@${instagram}`,
+      detail: "Send us a DM",
+      href: `https://instagram.com/${instagram}`,
+      external: true,
+    },
+  ];
+}
 
-export default function ContactChannels() {
+export default async function ContactChannels() {
+  const { contactPhone, instagram } = await getSettings();
+  const CHANNELS = channels(contactPhone, instagram);
+
   return (
     <nav aria-labelledby="channels-heading">
       <h2 id="channels-heading" className={sectionHeadingClassName}>

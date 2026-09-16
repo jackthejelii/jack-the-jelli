@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getSettings } from "@/lib/settings";
 import LegalDocument from "@/features/legal/components/LegalDocument";
 import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
@@ -16,7 +17,13 @@ export const metadata: Metadata = {
  * env vars name. Keep it in step with the code: if a new field or a new
  * third-party service appears, it belongs here too.
  */
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  // Contact details are shop settings now — the owner can change the published
+  // address or number from /admin/settings without a deploy. `legalName` stays
+  // on LEGAL_INFO: the legal entity a customer contracts with is not something
+  // an admin form should be able to rewrite.
+  const { contactEmail, contactPhone, address } = await getSettings();
+
   return (
     <LegalDocument
       title="Privacy Policy"
@@ -28,10 +35,8 @@ export default function PrivacyPolicyPage() {
         decides how the information described below is used. We respect your
         privacy and are committed to protecting the personal information you
         share with us. You can reach us at{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>{" "}
-        or {LEGAL_INFO.contactPhone}, or write to us at {LEGAL_INFO.address}.
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a> or {contactPhone},
+        or write to us at {address}.
       </p>
 
       <h2>What we collect</h2>
@@ -152,13 +157,10 @@ export default function PrivacyPolicyPage() {
 
       <h2>Your choices</h2>
       <p>
-        Write to us at{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>{" "}
-        to ask for a copy of what we hold about you, to correct something that
-        is wrong, or to have your account deleted. We will ask a question or two
-        to confirm the request comes from you.
+        Write to us at <a href={`mailto:${contactEmail}`}>{contactEmail}</a> to
+        ask for a copy of what we hold about you, to correct something that is
+        wrong, or to have your account deleted. We will ask a question or two to
+        confirm the request comes from you.
       </p>
       <p>
         You can see your own orders at any time from your account, or look up a

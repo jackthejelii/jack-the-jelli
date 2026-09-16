@@ -5,6 +5,14 @@ import {
 
 interface StockIndicatorProps {
   count: number;
+  /**
+   * "How low is low", from the shop's settings. Required rather than defaulted
+   * so this badge and the `$expr` stock filter in features/admin/lib/products.ts
+   * are always answering with the same number — a row selected by the Low stock
+   * filter that then renders as In stock is the exact confusion a default here
+   * would eventually cause.
+   */
+  threshold: number;
 }
 
 // "How low is low" lives in features/products/lib/stock.ts (D3b) — never inline here.
@@ -17,8 +25,11 @@ const STOCK_STYLES: Record<StockStatus, { dot: string; text: string }> = {
   "in-stock": { dot: "bg-foreground/40", text: "text-foreground" },
 };
 
-export default function StockIndicator({ count }: StockIndicatorProps) {
-  const status = getStockStatus(count);
+export default function StockIndicator({
+  count,
+  threshold,
+}: StockIndicatorProps) {
+  const status = getStockStatus(count, threshold);
   const style = STOCK_STYLES[status];
   const label =
     status === "out-of-stock"

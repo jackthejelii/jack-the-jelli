@@ -1,29 +1,32 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import AdminTableSkeleton from "@/features/admin/components/AdminTableSkeleton";
 
 /**
- * Covers the order manager, and stands in for any admin child route that has
- * no closer loading.tsx of its own.
+ * The fallback for `/admin` itself, and for any admin child route that has no
+ * closer `loading.tsx` of its own — today that means `/admin/products/new` and
+ * `/admin/products/[id]`, which have always relied on this file rather than
+ * carrying one each.
  *
- * It renders inside app/admin/layout.tsx, so the sidebar is already on screen
- * and only the content column is stood in for — the layout's requireAdmin()
- * has resolved by the time this shows.
+ * That inheritance is why this file still exists after the order manager moved
+ * out to `/admin/orders`: the order-table skeleton went with it, and without a
+ * replacement here the two product forms would have silently lost their
+ * fallback and flashed an empty column instead.
+ *
+ * Deliberately shape-agnostic. The old version was a table skeleton standing
+ * in for a form, which is worse than a neutral block — it promises a layout
+ * that never arrives. It renders inside app/admin/layout.tsx, so the sidebar
+ * is already on screen and the layout's requireAdmin() has resolved.
  */
-export default function AdminOrdersLoading() {
+export default function AdminLoading() {
   return (
     <div className="flex flex-col gap-12">
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <Skeleton className="h-9 w-64 rounded-none" />
-        <Skeleton className="h-10 w-40 rounded-none" />
       </header>
 
-      {/* OrderFilters: a search box beside the status tabs. */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Skeleton className="h-10 w-full rounded-none sm:max-w-sm" />
-        <Skeleton className="h-10 w-64 rounded-none" />
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-32 w-full rounded-none" />
+        <Skeleton className="h-32 w-full rounded-none" />
       </div>
-
-      <AdminTableSkeleton columns={5} minWidth="min-w-3xl" />
     </div>
   );
 }

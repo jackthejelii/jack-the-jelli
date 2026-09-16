@@ -1,13 +1,15 @@
 "use server";
 
 import { type ClientSession } from "mongoose";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth-guard";
 import { connectDB } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { Order, Product, type IOrderItem } from "@/models";
 import type { AdminFormState } from "@/features/admin/lib/form-state";
-import { STALE_DRAFT_MINUTES } from "@/features/admin/lib/orders";
+
+import { ORDERS_TAG } from "@/features/orders/lib/cache-tags";
 import { ORDER_NUMBER_PATTERN } from "@/features/orders/lib/order-number";
 import {
   ADMIN_SETTABLE_STATUSES,
@@ -54,8 +56,17 @@ const paymentInputSchema = z.object({
   paymentStatus: z.enum(PAYMENT_STATUSES),
 });
 
+// `/admin` here always meant the order list, which now lives at its own
+// `/admin/orders`. The reporting page that took over `/admin` is invalidated by
+// cache tag rather than by path, so it is deliberately not listed.
 function revalidateOrder(orderNumber: string) {
-  revalidatePath("/admin");
+  // The reporting page reads through cached aggregations rather than a path,
+  // so it is invalidated by tag. "max" serves the existing figures while the
+  // new ones are computed — a dashboard may be a second behind; it must not
+  // make an admin wait.
+  revalidateTag(ORDERS_TAG, "max");
+  revalidatePath("/admin/logistics");
+  revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${orderNumber}`);
   revalidatePath("/my-orders");
 }
@@ -501,7 +512,10 @@ export async function releaseStaleDrafts(): Promise<AdminFormState> {
   try {
     const mongooseInstance = await connectDB();
 
-    const staleBefore = new Date(Date.now() - STALE_DRAFT_MINUTES * 60_000);
+    // The same window getOrders counts with, so the button's badge and what
+    // the sweep actually releases can never disagree.
+    const { staleDraftMinutes } = await getSettings();
+    const staleBefore = new Date(Date.now() - staleDraftMinutes * 60_000);
     const drafts = await Order.find({
       status: "Draft",
       createdAt: { $lt: staleBefore },
@@ -579,8 +593,9 @@ export async function releaseStaleDrafts(): Promise<AdminFormState> {
     return { ok: false, message: "Could not release the held drafts." };
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
   revalidatePath("/collection");
+  revalidateTag(ORDERS_TAG, "max");
   return {
     ok: true,
     message:

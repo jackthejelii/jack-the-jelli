@@ -12,6 +12,7 @@ import {
   amountToFreeDelivery,
   getDeliveryFee,
   getDeliveryZone,
+  type DeliveryRates,
 } from "@/features/checkout/lib/delivery";
 import { formatPrice } from "@/features/products/lib/format";
 
@@ -31,6 +32,7 @@ export default function CheckoutSummary({
   unavailable,
   blocked,
   notice,
+  rates,
 }: {
   items: CartItem[];
   district: string;
@@ -40,6 +42,8 @@ export default function CheckoutSummary({
   blocked: boolean;
   /** Form-level message from the last attempt, shown with the alert. */
   notice?: string;
+  /** The shop's live rates, from the server. Quoted here, enforced in placeOrder. */
+  rates: DeliveryRates;
 }) {
   const setQty = useCartStore((state) => state.setQty);
   const removeItem = useCartStore((state) => state.removeItem);
@@ -56,10 +60,10 @@ export default function CheckoutSummary({
   // Delivery can only be priced once a district is picked, so until then the
   // summary says so rather than quoting a number it might have to revise.
   const deliveryFee = district
-    ? getDeliveryFee(getDeliveryZone(district), subtotal)
+    ? getDeliveryFee(getDeliveryZone(district), subtotal, rates)
     : null;
   const total = subtotal + (deliveryFee ?? 0);
-  const shortfall = amountToFreeDelivery(subtotal);
+  const shortfall = amountToFreeDelivery(subtotal, rates.freeDeliveryThreshold);
 
   return (
     <aside className="border-outline-variant bg-surface-container-low border p-6 md:p-8 lg:sticky lg:top-32">

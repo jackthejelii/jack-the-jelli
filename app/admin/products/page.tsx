@@ -18,6 +18,7 @@ import StockIndicator from "@/features/admin/components/StockIndicator";
 import { getProducts } from "@/features/admin/lib/products";
 import type { StockStatus } from "@/features/products/lib/stock";
 import { totalStock } from "@/features/products/lib/variants";
+import { getSettings } from "@/lib/settings";
 
 const STOCK_FILTERS: StockStatus[] = ["in-stock", "low-stock", "out-of-stock"];
 
@@ -47,6 +48,11 @@ export default async function AdminInventory({
       ? params.status
       : undefined;
   const page = Number.parseInt(params.page ?? "1", 10);
+
+  // The same threshold getProducts filters by, so the badge on a row and the
+  // filter that selected it can never disagree. Cached, so it is not a second
+  // database round trip.
+  const { lowStockThreshold } = await getSettings();
 
   const {
     products,
@@ -178,7 +184,10 @@ export default async function AdminInventory({
                   {/* Summed across colourways — a piece is out of stock only
                       when every colour is. The per-colour counts sit in the
                       swatch tooltips beside the name, and in the editor. */}
-                  <StockIndicator count={totalStock(product.variants)} />
+                  <StockIndicator
+                    count={totalStock(product.variants)}
+                    threshold={lowStockThreshold}
+                  />
                 </TableCell>
                 <TableCell className="py-8">
                   <span

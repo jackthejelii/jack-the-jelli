@@ -252,11 +252,14 @@ which colour it meant.
 
 | Route                                         | What it does                                                                 |
 | --------------------------------------------- | ---------------------------------------------------------------------------- |
-| `/admin`                                      | **Order Manager** — filter by status, search, paginate, release stale drafts |
+| `/admin`                                      | **Sales Overview** — KPIs, orders over time, zone/district/status charts    |
+| `/admin/orders`                               | **Order Manager** — filter by status, search, paginate, release stale drafts |
 | `/admin/orders/[id]`                          | Order detail: status controls, payment settle, customer panel, history       |
 | `/admin/products`                             | Product list with filters and pagination                                     |
 | `/admin/products/new`, `/admin/products/[id]` | Create/edit product, Cloudinary uploader, category manager                   |
 | `/admin/customers`                            | User list, role assignment, account deletion                                 |
+| `/admin/logistics`                            | Dispatch queue, bulk mark-shipped, overdue shipments, courier handoff        |
+| `/admin/settings`                             | Delivery pricing, store details, operations, pause orders / maintenance      |
 
 ---
 

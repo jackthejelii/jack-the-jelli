@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Menu,
   LayoutDashboard,
+  ClipboardList,
   Package,
   Truck,
   Users,
@@ -17,6 +18,7 @@ import Logo from "@/components/layout/Logo";
 
 const navItems = [
   { label: "Sales Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Order Manager", href: "/admin/orders", icon: ClipboardList },
   { label: "Products Control", href: "/admin/products", icon: Package },
   { label: "Logistics", href: "/admin/logistics", icon: Truck },
   { label: "Customers", href: "/admin/customers", icon: Users },
@@ -27,26 +29,29 @@ const navItems = [
 function NavItems() {
   const pathname = usePathname();
 
-  // Determine which nav item is active for the current pathname
+  // Which nav item is lit for the current pathname.
+  //
+  // Longest prefix wins, which is the whole rule now that every section owns
+  // its own subtree: `/admin/orders/JJ-250805-K3M9` matches both `/admin` and
+  // `/admin/orders`, and the longer one is the right answer. That used to need
+  // a hand-written exception for `/admin/products/*`, because the order list
+  // sat at `/admin` and its detail pages at `/admin/orders/*` — a detail page
+  // therefore lit "Sales Overview", and the exception existed to stop the same
+  // thing happening to the product forms. Moving the list to `/admin/orders`
+  // removed the cause, so the exception went with it.
   let activeHref: string | null = null;
   if (pathname) {
-    // 1. Exact match first
-    const exact = navItems.find((i) => i.href === pathname);
+    const exact = navItems.find((item) => item.href === pathname);
     if (exact) activeHref = exact.href;
-    // 2. Longest prefix match (e.g. /admin/orders/... → /admin)
     else {
       let longest = "";
-      for (const i of navItems) {
+      for (const item of navItems) {
         if (
-          pathname.startsWith(i.href + "/") &&
-          i.href.length > longest.length
+          pathname.startsWith(item.href + "/") &&
+          item.href.length > longest.length
         ) {
-          longest = i.href;
+          longest = item.href;
         }
-      }
-      // /admin/products/* → Products Control
-      if (pathname.startsWith("/admin/products")) {
-        activeHref = "/admin/products";
       }
       if (longest) activeHref = longest;
     }

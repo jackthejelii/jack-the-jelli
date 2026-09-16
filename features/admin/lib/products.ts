@@ -2,17 +2,19 @@
 import { Types, type QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { escapeRegex } from "@/lib/slug";
+import { getSettings } from "@/lib/settings";
 import { Category, Product, type IProduct } from "@/models";
-import {
-  LOW_STOCK_THRESHOLD,
-  type StockStatus,
-} from "@/features/products/lib/stock";
+import type { StockStatus } from "@/features/products/lib/stock";
 import type { ProductDTO } from "@/features/admin/lib/types";
 
 // Server-only: pulls in Mongoose. Everything here returns plain, serializable
 // objects because Mongoose docs don't cross the server/client boundary (§6.3).
 
-export const PRODUCTS_PER_PAGE = 10;
+// Rows per page is `ordersPerPage` in the shop's settings now, read per call.
+// Note this is the ADMIN table's page size — the storefront collection grid
+// has its own PRODUCTS_PER_PAGE of 9 in features/products/lib/constants.ts,
+// which is a layout decision about a three-column grid and deliberately not
+// the same knob.
 
 /** A lean product with its category ref resolved by populate. */
 type LeanProduct = Omit<IProduct, "category"> & {
@@ -60,10 +62,17 @@ function toProductDTO(product: LeanProduct): ProductDTO {
  * document, and it cannot use an index. That is affordable here and only here:
  * this is the admin table, filtered by hand over a catalogue of tens. Nothing
  * on the storefront's hot path filters by stock.
+ *
+ * The threshold is passed in so this stays a mirror of `getStockStatus` rather
+ * than drifting from it: both now read the same shop setting, and the filter a
+ * row is selected by agrees with the badge printed on it.
  */
 const variantStockSum = { $sum: "$variants.stock" };
 
-function stockFilter(stock: StockStatus): QueryFilter<IProduct> {
+function stockFilter(
+  stock: StockStatus,
+  threshold: number,
+): QueryFilter<IProduct> {
   switch (stock) {
     case "out-of-stock":
       return { $expr: { $lte: [variantStockSum, 0] } };
@@ -72,12 +81,12 @@ function stockFilter(stock: StockStatus): QueryFilter<IProduct> {
         $expr: {
           $and: [
             { $gt: [variantStockSum, 0] },
-            { $lte: [variantStockSum, LOW_STOCK_THRESHOLD] },
+            { $lte: [variantStockSum, threshold] },
           ],
         },
       };
     case "in-stock":
-      return { $expr: { $gt: [variantStockSum, LOW_STOCK_THRESHOLD] } };
+      return { $expr: { $gt: [variantStockSum, threshold] } };
   }
 }
 
@@ -102,6 +111,7 @@ export async function getProducts({
   page = 1,
 }: ProductQuery): Promise<ProductListResult> {
   await connectDB();
+  const { lowStockThreshold, ordersPerPage } = await getSettings();
 
   const filter: QueryFilter<IProduct> = {};
 
@@ -113,20 +123,20 @@ export async function getProducts({
     // typing a black bifold's SKU still finds the product it belongs to.
     filter.$or = [{ name: pattern }, { "variants.sku": pattern }];
   }
-  if (stock) Object.assign(filter, stockFilter(stock));
+  if (stock) Object.assign(filter, stockFilter(stock, lowStockThreshold));
   // Archived products are hidden from the default (unfiltered) list — that's
   // the whole point of archiving instead of a hard delete — but still fully
   // queryable by explicitly selecting the Archived filter.
   filter.status = status ?? { $ne: "Archived" };
 
   const total = await Product.countDocuments(filter);
-  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / ordersPerPage));
   const currentPage = Math.min(Math.max(1, page), totalPages);
 
   const products = await Product.find(filter)
     .sort({ createdAt: -1 })
-    .skip((currentPage - 1) * PRODUCTS_PER_PAGE)
-    .limit(PRODUCTS_PER_PAGE)
+    .skip((currentPage - 1) * ordersPerPage)
+    .limit(ordersPerPage)
     .populate<{ category: { _id: Types.ObjectId; name: string } | null }>(
       "category",
       "name",

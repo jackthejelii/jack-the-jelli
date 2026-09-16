@@ -1,6 +1,37 @@
 import { Resend } from "resend";
 import { formatPrice } from "@/features/products/lib/format";
 import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
+import { getSettings } from "@/lib/settings";
+
+/**
+ * The address block in every email footer.
+ *
+ * Read from the shop's settings so a change on /admin/settings reaches
+ * transactional mail too, but wrapped: this runs inside Better Auth's send
+ * hooks as well as inside Server Actions, and a cached read that throws in
+ * some future context must never be the reason a verification email fails to
+ * go out. The fallback is the constant this footer used to print.
+ *
+ * `brand` deliberately stays on LEGAL_INFO — the name at the bottom of an
+ * email is the legal entity, not an editable contact detail.
+ */
+async function footerContact(): Promise<{
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+}> {
+  try {
+    const { address, contactEmail, contactPhone } = await getSettings();
+    return { address, contactEmail, contactPhone };
+  } catch (error) {
+    console.error("email footer settings lookup failed", error);
+    return {
+      address: LEGAL_INFO.address,
+      contactEmail: LEGAL_INFO.contactEmail,
+      contactPhone: LEGAL_INFO.contactPhone,
+    };
+  }
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -98,6 +129,7 @@ const SANS =
 function renderEmailHtml(
   heading: string,
   bodyText: string,
+  contact: { address: string; contactEmail: string; contactPhone: string },
   action?: EmailAction,
   summaryHtml?: string,
   preheader?: string,
@@ -134,8 +166,8 @@ function renderEmailHtml(
             <tr>
               <td style="padding:22px 36px 28px;border-top:1px solid ${RULE};font-family:${SANS};font-size:12px;line-height:1.7;color:${BROWN};">
                 <div style="color:${INK};">${escapeHtml(LEGAL_INFO.brand)}</div>
-                <div>${escapeHtml(LEGAL_INFO.address)}</div>
-                <div>${escapeHtml(LEGAL_INFO.contactEmail)} &middot; ${escapeHtml(LEGAL_INFO.contactPhone)}</div>
+                <div>${escapeHtml(contact.address)}</div>
+                <div>${escapeHtml(contact.contactEmail)} &middot; ${escapeHtml(contact.contactPhone)}</div>
                 ${
                   site
                     ? `<div style="padding-top:10px;"><a href="${escapeHtml(site)}" style="color:${BROWN};">${escapeHtml(site.replace(/^https?:\/\//, ""))}</a></div>`
@@ -235,7 +267,14 @@ async function sendEmail({
     to,
     replyTo: replyTo ?? process.env.SUPPORT_EMAIL,
     subject,
-    html: renderEmailHtml(heading, bodyText, action, summaryHtml, preheader),
+    html: renderEmailHtml(
+      heading,
+      bodyText,
+      await footerContact(),
+      action,
+      summaryHtml,
+      preheader,
+    ),
   });
 
   if (error) {

@@ -5,8 +5,9 @@ import Category from "./Category";
 import Contact from "./Contact";
 import Order from "./Order";
 import Product from "./Product";
+import Settings from "./Settings";
 
-export { Cart, Category, Contact, Order, Product };
+export { Cart, Category, Contact, Order, Product, Settings };
 export type { ICart, ICartItem } from "./Cart";
 export type { ICategory } from "./Category";
 export type { IContact } from "./Contact";
@@ -23,3 +24,5 @@ export type {
   ProductStatus,
 } from "./Product";
 export { PRODUCT_STATUSES } from "./Product";
+export type { ISettings } from "./Settings";
+export { SETTINGS_DOC_ID } from "./Settings";

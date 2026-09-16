@@ -1,26 +1,42 @@
 // Brand terms shown on every product detail page. Kept here so the wording is
 // edited in one place rather than inside the markup.
 
-import {
-  DELIVERY_FEE_INSIDE_DHAKA,
-  DELIVERY_FEE_OUTSIDE_DHAKA,
-} from "@/features/checkout/lib/delivery";
 import { formatTaka } from "@/features/products/lib/format";
 
 /**
  * The delivery line carries the actual charge, not just a duration.
  *
- * It reads the two fees from `features/checkout/lib/delivery.ts` rather than
- * restating them, because a shopper meeting a courier charge for the first
- * time on the checkout page is the most reliable abandonment cause in
- * cash-on-delivery commerce — and a hardcoded number here would eventually
- * disagree with the one the order is actually priced at.
+ * It takes the figures rather than importing them, because both are shop
+ * settings now — a constant built at module load would be the fee the server
+ * happened to boot with, not the fee the order will be priced at. A shopper
+ * meeting a courier charge for the first time on the checkout page is the most
+ * reliable abandonment cause in cash-on-delivery commerce, so this line has to
+ * be right.
  *
- * Deliberately makes no free-delivery claim: the shop does not offer one.
+ * Deliberately makes no free-delivery claim: the shop does not advertise one
+ * on the product page even though a large enough order gets it.
+ *
+ * NOTE — this used to read "Delivered in 3 to 5 working days", a figure that
+ * appeared nowhere else. `/shipping`, the contact FAQ and `LEGAL_INFO` all say
+ * five to seven. Two different promises on two pages of the same shop is a
+ * defect whichever one is right, so this now quotes the same window as
+ * everything else.
  */
-export const SHIPPING_COPY = `${formatTaka(DELIVERY_FEE_INSIDE_DHAKA)} in Dhaka, ${formatTaka(
-  DELIVERY_FEE_OUTSIDE_DHAKA,
-)} elsewhere in Bangladesh. Delivered in 3 to 5 working days.`;
+export function shippingCopy({
+  feeInsideDhaka,
+  feeOutsideDhaka,
+  deliveryDaysMin,
+  deliveryDaysMax,
+}: {
+  feeInsideDhaka: number;
+  feeOutsideDhaka: number;
+  deliveryDaysMin: number;
+  deliveryDaysMax: number;
+}): string {
+  return `${formatTaka(feeInsideDhaka)} in Dhaka, ${formatTaka(
+    feeOutsideDhaka,
+  )} elsewhere in Bangladesh. Delivered in ${deliveryDaysMin} to ${deliveryDaysMax} working days.`;
+}
 
 /**
  * The single strongest reassurance this brand has, and it used to appear

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { getSettings } from "@/lib/settings";
 import LegalDocument from "@/features/legal/components/LegalDocument";
-import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
 
 export const metadata: Metadata = {
   title: "Returns & Refunds",
@@ -25,7 +25,13 @@ export const metadata: Metadata = {
  * what a shopper looks for in the nav and what a marketplace review checks
  * for. Saying plainly that there are none is the honest version of that page.
  */
-export default function ReturnsPolicyPage() {
+export default async function ReturnsPolicyPage() {
+  // Contact details are shop settings now — the owner can change the published
+  // address or number from /admin/settings without a deploy. `legalName` stays
+  // on LEGAL_INFO: the legal entity a customer contracts with is not something
+  // an admin form should be able to rewrite.
+  const { contactEmail, contactPhone, address } = await getSettings();
+
   return (
     <LegalDocument
       title="Returns &amp; Refunds"
@@ -62,10 +68,9 @@ export default function ReturnsPolicyPage() {
       </ul>
       <p>
         If the answer to any of those is no, do not pay. Refuse the parcel, and
-        call us on {LEGAL_INFO.contactPhone} so we know to expect it back. We
-        will send a replacement or cancel the order, whichever you prefer. You
-        are not charged for a refused delivery, and you do not pay the return
-        courier.
+        call us on {contactPhone} so we know to expect it back. We will send a
+        replacement or cancel the order, whichever you prefer. You are not
+        charged for a refused delivery, and you do not pay the return courier.
       </p>
 
       <h2>All sales are final after delivery</h2>
@@ -94,8 +99,8 @@ export default function ReturnsPolicyPage() {
       <h2>Cancelling before delivery</h2>
       <p>
         You can cancel any order at no cost before it has been dispatched — just
-        call us on {LEGAL_INFO.contactPhone}. Because payment happens at the
-        door, cancelling costs you nothing.
+        call us on {contactPhone}. Because payment happens at the door,
+        cancelling costs you nothing.
       </p>
       <p>
         After dispatch we cannot pull a parcel back from the courier, but you
@@ -107,11 +112,9 @@ export default function ReturnsPolicyPage() {
       <p>
         Talk to us. If a piece fails in a way that looks like a genuine defect
         rather than wear, we would still like to hear about it — call{" "}
-        {LEGAL_INFO.contactPhone}, email{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>
-        , or use our <a href="/contact">contact page</a>, with your{" "}
+        {contactPhone}, email{" "}
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>, or use our{" "}
+        <a href="/contact">contact page</a>, with your{" "}
         <strong>order number</strong> to hand. It is on your confirmation and on{" "}
         <a href="/track">the tracking page</a>. We make no promise of a refund
         here, and we will tell you honestly what we can do.
@@ -123,12 +126,9 @@ export default function ReturnsPolicyPage() {
 
       <h2>Questions</h2>
       <p>
-        Write to us at {LEGAL_INFO.address}, call {LEGAL_INFO.contactPhone}, or
-        email{" "}
-        <a href={`mailto:${LEGAL_INFO.contactEmail}`}>
-          {LEGAL_INFO.contactEmail}
-        </a>
-        . See also our <a href="/shipping">Shipping Policy</a> and our{" "}
+        Write to us at {address}, call {contactPhone}, or email{" "}
+        <a href={`mailto:${contactEmail}`}>{contactEmail}</a>. See also our{" "}
+        <a href="/shipping">Shipping Policy</a> and our{" "}
         <a href="/terms">Terms of Service</a>.
       </p>
     </LegalDocument>

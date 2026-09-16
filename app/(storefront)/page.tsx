@@ -3,6 +3,7 @@ import FeaturedSection from "@/features/homepage/components/FeaturedSection";
 import HeroSection from "@/features/homepage/components/HeroSection";
 import ProductSection from "@/features/homepage/components/ProductSection";
 import JsonLd from "@/features/seo/components/JsonLd";
+import { getSettings } from "@/lib/settings";
 import {
   organizationSchema,
   websiteSchema,
@@ -21,13 +22,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function Home() {
+export default async function Home() {
+  // The published contact facts are shop settings, so the Organization node is
+  // built per render from them rather than from a module constant. Cached, so
+  // the homepage keeps its static shell.
+  const { contactEmail, contactPhone, instagram } = await getSettings();
+
   return (
     <>
       {/* The brand and the site as separate nodes, emitted once on the one page
           that is about the site rather than about a piece. Everything else
           references them by @id — see features/seo/lib/structured-data.ts. */}
-      <JsonLd schema={organizationSchema()} />
+      <JsonLd
+        schema={organizationSchema({ contactEmail, contactPhone, instagram })}
+      />
       <JsonLd schema={websiteSchema()} />
       <HeroSection />
       <div id="collection">

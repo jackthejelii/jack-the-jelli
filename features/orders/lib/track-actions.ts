@@ -1,6 +1,7 @@
 "use server";
 
 import { clientKey, createRateLimiter } from "@/lib/rate-limit";
+import { getSettings } from "@/lib/settings";
 import { getOrderForTracking } from "@/features/orders/lib/orders";
 import type { TrackState } from "@/features/orders/lib/track-state";
 
@@ -45,6 +46,16 @@ export async function lookupOrder(
       values,
       message: "Enter both your order number and the phone number you gave.",
     };
+  }
+
+  // Tracking survives "orders paused" on purpose — a customer with a live
+  // order still needs to know where it is, and refusing them would punish the
+  // people who already bought. Only full maintenance closes it, and even then
+  // this is the check that counts: the storefront gate stops /track rendering,
+  // but this action is a public endpoint reachable without it.
+  const { maintenanceMode, maintenanceMessage } = await getSettings();
+  if (maintenanceMode) {
+    return { searched: true, values, message: maintenanceMessage };
   }
 
   if (lookupLimiter(await clientKey())) {

@@ -34,6 +34,40 @@ export async function requireAuth(intendedPath?: string) {
   return session;
 }
 
+/**
+ * "Is whoever is asking an admin?" — the same check as requireAdmin, answered
+ * rather than enforced.
+ *
+ * It exists for exactly one caller: the maintenance gate on the storefront,
+ * which has to let the shop's own people through to a site that is closed to
+ * everyone else. A redirect would be wrong there — there is nowhere to send a
+ * customer during maintenance, the notice *is* the page.
+ *
+ * This is not a second security boundary and must never be used as one. It
+ * decides what to render, and rendering has never protected anything: every
+ * privileged action still calls requireAdmin() as its own first statement.
+ *
+ * Reading a session makes the caller dynamic, which is why the gate only
+ * reaches this once it already knows maintenance mode is on — see the comment
+ * in app/(storefront)/layout.tsx.
+ */
+export async function isAdmin(): Promise<boolean> {
+  const session = await getSession();
+  if (!session || !ObjectId.isValid(session.user.id)) return false;
+
+  try {
+    const users = await getUsersCollection();
+    // Re-read from the database, never trusted from the session token — the
+    // same rule requireAdmin follows, for the same reason.
+    const user = await users.findOne({ _id: new ObjectId(session.user.id) });
+    return user?.role === "admin";
+  } catch (error) {
+    // A database problem must not accidentally hand someone the bypass.
+    console.error("isAdmin check failed", error);
+    return false;
+  }
+}
+
 export async function requireAdmin(intendedPath?: string) {
   const session = await getSession();
   if (!session) redirect(loginPath(intendedPath));

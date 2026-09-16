@@ -215,6 +215,18 @@ const orderSchema = new Schema<IOrder>(
 // The admin list filters on status then sorts by recency; without the sort key
 // in the same index Mongo sorts the whole matching set in memory.
 orderSchema.index({ status: 1, createdAt: -1 });
+
+// The reporting range scan behind /admin and /admin/logistics. Those group by
+// `placedAt` — the moment an order actually became an order — rather than
+// `createdAt`, which for a Draft is when the idempotency key was claimed. The
+// two are usually milliseconds apart and occasionally are not, and a report
+// that silently counts abandoned checkouts is worse than no report.
+//
+// Not covered by {status, createdAt} above: that index leads with status, so a
+// date range across every live status cannot use it. Same caveat as every
+// other index in this file — Mongoose only ever calls createIndex, so changing
+// this later needs a manual dropIndex.
+orderSchema.index({ placedAt: -1 });
 // /my-orders.
 orderSchema.index({ userId: 1, createdAt: -1 });
 // claimGuestOrders, which runs from the session.create hook on *every* sign-in.

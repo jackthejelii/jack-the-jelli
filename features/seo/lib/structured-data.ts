@@ -38,13 +38,17 @@ const PRICE_CURRENCY = "BDT";
  * The brand itself: what fills a knowledge panel, and what ties the Instagram
  * account to the domain.
  *
- * Every value is read from LEGAL_INFO rather than restated, so the phone number
- * in the markup is the phone number on the contact page by construction. Note
- * that several LEGAL_INFO entries are still marked TODO — this publishes them
- * more widely, which is an argument for confirming them, not for duplicating
- * them here.
+ * The contact facts are passed in rather than imported, because they are shop
+ * settings now: the owner can change the published address from
+ * /admin/settings, and a schema built from a module constant would keep
+ * telling search engines the old one. `legalName` stays on LEGAL_INFO — the
+ * legal entity is not something an admin form should be able to rewrite.
  */
-export function organizationSchema(): Schema {
+export function organizationSchema(contact: {
+  contactEmail: string;
+  contactPhone: string;
+  instagram: string;
+}): Schema {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -56,8 +60,8 @@ export function organizationSchema(): Schema {
     image: absoluteUrl("/link-preview.jpg"),
     description:
       "Handmade faux leather wallets and small goods, made in Bangladesh for daily carry.",
-    email: LEGAL_INFO.contactEmail,
-    telephone: LEGAL_INFO.contactPhone,
+    email: contact.contactEmail,
+    telephone: contact.contactPhone,
     address: {
       "@type": "PostalAddress",
       addressLocality: "Dhaka",
@@ -65,7 +69,7 @@ export function organizationSchema(): Schema {
     },
     // The one profile the footer links. `sameAs` is how a search engine
     // establishes that the account and the domain are the same business.
-    sameAs: [`https://instagram.com/${LEGAL_INFO.instagram}`],
+    sameAs: [`https://instagram.com/${contact.instagram}`],
   };
 }
 

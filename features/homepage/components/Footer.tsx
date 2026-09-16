@@ -3,7 +3,7 @@ import Logo from "@/components/layout/Logo";
 import Reveal from "@/components/layout/Reveal";
 import InstagramIcon from "@/components/layout/InstagramIcon";
 import { LEGAL_LINKS } from "@/components/layout/nav-links";
-import { LEGAL_INFO } from "@/features/legal/lib/legal-info";
+import { getSettings } from "@/lib/settings";
 
 const footerLinkClassName =
   "text-on-surface-variant hover:text-foreground text-[14px] leading-relaxed transition-colors";
@@ -13,7 +13,13 @@ const footerLinkClassName =
  * without scrolling. What is left here is the footnote material: the one place
  * to follow the brand, and the two documents nobody reads until they need to.
  */
-export default function Footer() {
+/**
+ * Async only to read the Instagram handle, which is a shop setting. The read
+ * is cached, so the footer stays part of the prerendered shell.
+ */
+export default async function Footer() {
+  const { instagram } = await getSettings();
+
   return (
     <footer className="border-t border-[rgba(138,121,104,0.2)]">
       {/* Takes over the container's classes rather than wrapping it, so the
@@ -39,10 +45,10 @@ export default function Footer() {
             the text links sit from each other. */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
           <a
-            href={`https://instagram.com/${LEGAL_INFO.instagram}`}
+            href={`https://instagram.com/${instagram}`}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Jack The Jelli on Instagram, @${LEGAL_INFO.instagram}`}
+            aria-label={`Jack The Jelli on Instagram, @${instagram}`}
             className="text-on-surface-variant hover:text-foreground focus-visible:outline-foreground ease-editorial -m-2 p-2 transition-colors duration-(--motion-quick) focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <InstagramIcon className="size-5" />

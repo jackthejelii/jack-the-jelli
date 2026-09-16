@@ -1,12 +1,17 @@
 import {
   PAYMENT_COPY,
   RETURNS_COPY,
-  SHIPPING_COPY,
 } from "@/features/products/lib/product-copy";
 
 interface ProductSpecListProps {
   material?: string;
   dimensions?: string;
+  /**
+   * The delivery sentence, already built from the shop's live fees and courier
+   * window. Passed in rather than imported: both figures are settings now, so
+   * a module-level constant would be whatever the server booted with.
+   */
+  shippingCopy: string;
 }
 
 /**
@@ -27,11 +32,12 @@ interface ProductSpecListProps {
 export default function ProductSpecList({
   material,
   dimensions,
+  shippingCopy,
 }: ProductSpecListProps) {
   const rows = [
     ...(material ? [{ label: "Material", value: material }] : []),
     ...(dimensions ? [{ label: "Dimensions", value: dimensions }] : []),
-    { label: "Delivery", value: SHIPPING_COPY },
+    { label: "Delivery", value: shippingCopy },
     { label: "Payment", value: PAYMENT_COPY },
     { label: "Exchanges", value: RETURNS_COPY },
   ];
