@@ -32,7 +32,66 @@ import type { SiteSettings } from "@/lib/settings";
  * on stops `/checkout` rendering its form, but the refusal that actually stops
  * an order lives in `placeOrder` — a tab opened a minute earlier still holds a
  * live form, and a direct POST never saw this page at all.
+ *
+ * Each switch sits in a bordered block with its state spelled out in words
+ * beside it. A bare toggle floating at the right edge of a wide row is easy to
+ * miss entirely — and "is that grey pill on or off?" is a bad question to be
+ * asking about the control that closes your shop. The word is unambiguous at a
+ * glance in a way a pill's position is not.
  */
+
+/** The switch, its state in words, and a hit area that covers both. */
+function ToggleRow({
+  id,
+  name,
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  description: React.ReactNode;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div
+      className={`flex flex-col gap-4 border p-5 transition-colors sm:flex-row sm:items-start sm:justify-between sm:gap-8 ${
+        checked
+          ? "border-destructive/50 bg-destructive/5"
+          : "border-border bg-muted/30"
+      }`}
+    >
+      <div>
+        <FieldLabel htmlFor={id} className={fieldLabelClassName}>
+          {label}
+        </FieldLabel>
+        <p className="text-muted-foreground mt-2 max-w-prose text-sm">
+          {description}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-3">
+        <span
+          className={`text-xs font-semibold tracking-widest uppercase ${
+            checked ? "text-destructive" : "text-muted-foreground"
+          }`}
+          aria-hidden="true"
+        >
+          {checked ? "On" : "Off"}
+        </span>
+        <Switch
+          id={id}
+          name={name}
+          checked={checked}
+          onCheckedChange={onChange}
+        />
+      </div>
+    </div>
+  );
+}
 export default function AvailabilitySettingsForm({
   settings,
 }: {
@@ -59,32 +118,25 @@ export default function AvailabilitySettingsForm({
         }
       >
         {/* ── Pause orders ─────────────────────────────────────────── */}
-        <div className="border-border flex flex-col gap-4 border-b pb-8">
-          <div className="flex items-start justify-between gap-6">
-            <div>
-              <FieldLabel
-                htmlFor="ordersPaused"
-                className={fieldLabelClassName}
-              >
-                Pause orders
-              </FieldLabel>
-              <p className="text-muted-foreground mt-1 text-sm">
+        <div className="flex flex-col gap-4">
+          <ToggleRow
+            id="ordersPaused"
+            name="ordersPaused"
+            label="Pause orders"
+            checked={paused}
+            onChange={(next) => {
+              setPaused(next);
+              markDirty();
+            }}
+            description={
+              <>
                 The catalogue stays open and browsable. Checkout closes, and any
                 order submitted anyway is refused. Carts are left alone —
                 pausing is temporary, and emptying someone&apos;s basket over it
                 would cost the sale you are trying to defer.
-              </p>
-            </div>
-            <Switch
-              id="ordersPaused"
-              name="ordersPaused"
-              checked={paused}
-              onCheckedChange={(next) => {
-                setPaused(next);
-                markDirty();
-              }}
-            />
-          </div>
+              </>
+            }
+          />
 
           <Field
             data-invalid={
@@ -118,31 +170,24 @@ export default function AvailabilitySettingsForm({
 
         {/* ── Full maintenance ─────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-6">
-            <div>
-              <FieldLabel
-                htmlFor="maintenanceMode"
-                className={fieldLabelClassName}
-              >
-                Full maintenance
-              </FieldLabel>
-              <p className="text-muted-foreground mt-1 text-sm">
+          <ToggleRow
+            id="maintenanceMode"
+            name="maintenanceMode"
+            label="Full maintenance"
+            checked={maintenance}
+            onChange={(next) => {
+              setMaintenance(next);
+              markDirty();
+            }}
+            description={
+              <>
                 The entire storefront is replaced by a notice and marked
                 noindex. Order tracking closes too. You will still see the real
                 site, because you are signed in as an admin — which is also the
                 only way to check your work before reopening.
-              </p>
-            </div>
-            <Switch
-              id="maintenanceMode"
-              name="maintenanceMode"
-              checked={maintenance}
-              onCheckedChange={(next) => {
-                setMaintenance(next);
-                markDirty();
-              }}
-            />
-          </div>
+              </>
+            }
+          />
 
           <Field
             data-invalid={
